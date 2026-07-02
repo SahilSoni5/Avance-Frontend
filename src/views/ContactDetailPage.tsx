@@ -10,7 +10,7 @@ import { formatDateTimeIST } from '../lib/locale';
 import { ModulePage, LoadingRows, ErrorMessage, formatCurrency, StatusBadge, OwnerCell } from '../components/ModulePage';
 import { Breadcrumbs } from '../components/Breadcrumbs';
 import { Button, Dialog, SectionCard, Badge } from '../components/ui';
-import { ContactFormDialog, type ContactFormValues } from '../components/ContactFormDialog';
+import { ContactFormDialog, contactFormToApiBody, type ContactFormValues } from '../components/ContactFormDialog';
 import { RecordForm } from '../components/RecordForm';
 import { invalidateContactBrandSync } from '../lib/query-invalidation';
 
@@ -69,21 +69,21 @@ export function ContactDetailPage() {
 
   const updateMutation = useMutation({
     mutationFn: (values: ContactFormValues) =>
-      apiFetch(`/contacts/${id}`, {
+      apiFetch<{ data: { accountId?: string | null } }>(`/contacts/${id}`, {
         method: 'PATCH',
-        body: JSON.stringify({
-          firstName: values.firstName,
-          lastName: values.lastName,
-          jobTitle: values.jobTitle || undefined,
-          status: values.status,
-          ...(values.accountId ? { accountId: values.accountId } : {}),
-        }),
+        body: JSON.stringify(contactFormToApiBody(values, { includeEmptyBrand: true })),
       }),
-    onSuccess: (_data, values) => {
+    onSuccess: (res, values) => {
       const prevAccountId = contact?.account?.id;
-      invalidateContactBrandSync(queryClient, { contactId: id, accountId: values.accountId || undefined });
-      if (prevAccountId && prevAccountId !== values.accountId) {
+      invalidateContactBrandSync(queryClient, {
+        contactId: id,
+        accountId: res.data?.accountId ?? undefined,
+      });
+      if (prevAccountId && prevAccountId !== res.data?.accountId) {
         invalidateContactBrandSync(queryClient, { accountId: prevAccountId });
+      }
+      if (values.brandName) {
+        queryClient.invalidateQueries({ queryKey: ['brands'] });
       }
       setEditOpen(false);
     },
@@ -240,9 +240,12 @@ export function ContactDetailPage() {
           email: contact.emails[0]?.email ?? '',
           phone: contact.phones[0]?.phone ?? '',
           status: contact.status ?? 'Active',
-          accountId: contact.account?.id ?? '',
+          brandName: contact.account?.name ?? '',
         }}
         loading={updateMutation.isPending}
+        submitError={
+          updateMutation.error instanceof Error ? updateMutation.error.message : null
+        }
         onSubmit={(values) => updateMutation.mutate(values)}
       />
 

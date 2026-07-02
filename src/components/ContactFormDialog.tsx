@@ -1,8 +1,6 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
-import { apiFetch } from '../lib/api';
 import { Button, Dialog, Input, Select } from './ui';
 
 export interface ContactFormValues {
@@ -12,7 +10,7 @@ export interface ContactFormValues {
   email: string;
   phone: string;
   status: string;
-  accountId: string;
+  brandName: string;
 }
 
 const EMPTY: ContactFormValues = {
@@ -22,19 +20,15 @@ const EMPTY: ContactFormValues = {
   email: '',
   phone: '',
   status: 'Lead',
-  accountId: '',
+  brandName: '',
 };
-
-interface BrandOption {
-  id: string;
-  name: string;
-}
 
 interface ContactFormDialogProps {
   open: boolean;
   onClose: () => void;
   onSubmit: (values: ContactFormValues) => void;
   loading?: boolean;
+  submitError?: string | null;
   title?: string;
   submitLabel?: string;
   initialValues?: Partial<ContactFormValues>;
@@ -45,20 +39,13 @@ export function ContactFormDialog({
   onClose,
   onSubmit,
   loading,
+  submitError,
   title = 'New Contact',
   submitLabel = 'Create Contact',
   initialValues,
 }: ContactFormDialogProps) {
   const [values, setValues] = useState<ContactFormValues>({ ...EMPTY, ...initialValues });
   const [error, setError] = useState('');
-
-  const { data: brandsData } = useQuery({
-    queryKey: ['brands-picker'],
-    queryFn: () => apiFetch<{ data: BrandOption[] }>('/brands?limit=200'),
-    enabled: open,
-  });
-
-  const brands = brandsData?.data ?? [];
 
   useEffect(() => {
     if (open) {
@@ -77,22 +64,30 @@ export function ContactFormDialog({
       setError('First and last name are required.');
       return;
     }
+    const email = values.email.trim();
+    if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      setError('Enter a valid email address or leave it blank.');
+      return;
+    }
     setError('');
     onSubmit({
       ...values,
       firstName: values.firstName.trim(),
       lastName: values.lastName.trim(),
       jobTitle: values.jobTitle.trim(),
-      email: values.email.trim(),
+      brandName: values.brandName.trim(),
+      email,
       phone: values.phone.trim(),
     });
   }
+
+  const displayError = error || submitError;
 
   return (
     <Dialog open={open} onClose={onClose} title={title}>
       <form onSubmit={handleSubmit} className="space-y-4">
         <p className="text-xs text-muted-foreground">
-          Contacts linked to a brand appear as POCs on that brand&apos;s page, and vice versa.
+          Type a brand name to link this contact as a POC. If the brand does not exist yet, it will be created automatically.
         </p>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -107,13 +102,12 @@ export function ContactFormDialog({
         </div>
 
         <div className="space-y-1">
-          <label className="text-sm font-medium text-foreground">Brand (POC of)</label>
-          <Select value={values.accountId} onChange={(e) => set('accountId', e.target.value)}>
-            <option value="">No brand — standalone contact</option>
-            {brands.map((b) => (
-              <option key={b.id} value={b.id}>{b.name}</option>
-            ))}
-          </Select>
+          <label className="text-sm font-medium text-foreground">Brand name</label>
+          <Input
+            value={values.brandName}
+            onChange={(e) => set('brandName', e.target.value)}
+            placeholder="e.g. Acme Corp (optional)"
+          />
         </div>
 
         <div className="space-y-1">
@@ -143,7 +137,7 @@ export function ContactFormDialog({
           </Select>
         </div>
 
-        {error && <p className="text-sm text-red-500">{error}</p>}
+        {displayError && <p className="text-sm text-red-500">{displayError}</p>}
 
         <div className="flex items-center justify-end gap-2 pt-2">
           <Button type="button" variant="outline" onClick={onClose} disabled={loading}>
@@ -158,14 +152,14 @@ export function ContactFormDialog({
   );
 }
 
-export function contactFormToApiBody(values: ContactFormValues) {
-  const linkedToBrand = Boolean(values.accountId);
+export function contactFormToApiBody(values: ContactFormValues, opts?: { includeEmptyBrand?: boolean }) {
+  const linkedToBrand = Boolean(values.brandName);
   return {
     firstName: values.firstName,
     lastName: values.lastName,
     ...(values.jobTitle ? { jobTitle: values.jobTitle } : {}),
     status: linkedToBrand && values.status === 'Lead' ? 'Active' : values.status || 'Lead',
-    ...(values.accountId ? { accountId: values.accountId } : {}),
+    ...(values.brandName || opts?.includeEmptyBrand ? { accountName: values.brandName } : {}),
     ...(values.email ? { emails: [{ email: values.email, isPrimary: true }] } : {}),
     ...(values.phone ? { phones: [{ phone: values.phone, isPrimary: true }] } : {}),
   };

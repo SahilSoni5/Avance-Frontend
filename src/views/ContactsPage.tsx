@@ -405,12 +405,18 @@ export function ContactsPage() {
 
   const createMutation = useMutation({
     mutationFn: (values: ContactFormValues) =>
-      apiFetch('/contacts', {
+      apiFetch<{ data: { id: string; accountId?: string | null } }>('/contacts', {
         method: 'POST',
         body: JSON.stringify(contactFormToApiBody(values)),
       }),
-    onSuccess: (_data, values) => {
-      invalidateContactBrandSync(queryClient, { accountId: values.accountId || undefined });
+    onSuccess: (res, values) => {
+      invalidateContactBrandSync(queryClient, {
+        accountId: res.data?.accountId ?? undefined,
+        contactId: res.data?.id,
+      });
+      if (values.brandName) {
+        queryClient.invalidateQueries({ queryKey: ['brands'] });
+      }
       setCreateOpen(false);
     },
   });
@@ -534,6 +540,9 @@ export function ContactsPage() {
         onClose={() => setCreateOpen(false)}
         onSubmit={(values) => createMutation.mutate(values)}
         loading={createMutation.isPending}
+        submitError={
+          createMutation.error instanceof Error ? createMutation.error.message : null
+        }
       />
     </div>
   );

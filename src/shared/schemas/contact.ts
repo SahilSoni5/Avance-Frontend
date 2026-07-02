@@ -19,6 +19,8 @@ export const createContactSchema = z.object({
   doNotContact: z.boolean().optional(),
   ownerId: z.string().uuid().optional(),
   accountId: z.string().uuid().optional(),
+  /** Link to a brand by name (creates the brand if missing). Send empty string on update to unlink. */
+  accountName: z.string().max(200).optional(),
   tagIds: z.array(z.string().uuid()).optional(),
 });
 
