@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { Loader2, Pencil } from 'lucide-react';
 import { apiFetch } from '../lib/api';
@@ -72,9 +72,14 @@ export function EditUserDialog({ userId, userName, open, onClose, onSuccess }: E
       label: `${u.firstName} ${u.lastName} (${u.role})`,
     }));
 
+  const wasOpen = useRef(false);
+
   useEffect(() => {
-    if (!open) updateMutation.reset();
-  }, [open, updateMutation]);
+    if (wasOpen.current && !open) {
+      updateMutation.reset();
+    }
+    wasOpen.current = open;
+  }, [open]);
 
   function handleSubmit(values: Record<string, string>) {
     const body: Record<string, string | null> = {

@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { Loader2, UserPlus } from 'lucide-react';
 import { apiFetch } from '../lib/api';
@@ -86,12 +86,15 @@ export function AddUserDialog({ open, onClose, onSuccess }: AddUserDialogProps) 
     },
   });
 
+  const wasOpen = useRef(false);
+
   useEffect(() => {
-    if (!open) {
+    if (wasOpen.current && !open) {
       createMutation.reset();
       setFormError('');
     }
-  }, [open, createMutation]);
+    wasOpen.current = open;
+  }, [open]);
 
   function handleSubmit(values: Record<string, string>) {
     if (values.role === 'EMPLOYEE' && !values.reportsToId?.trim()) {
