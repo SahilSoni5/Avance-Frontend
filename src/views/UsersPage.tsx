@@ -2,13 +2,14 @@
 
 import { useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { UserMinus, Users } from 'lucide-react';
+import { Pencil, UserMinus, Users } from 'lucide-react';
 import { apiFetch } from '../lib/api';
 import { useAuthStore } from '../stores/auth.store';
 import { Role, canDeactivateUser } from '@crm/shared';
 import { ModulePage, LoadingRows, ErrorMessage } from '../components/ModulePage';
 import { Button } from '../components/ui';
 import { DeactivateUserDialog } from '../components/DeactivateUserDialog';
+import { EditUserDialog } from '../components/EditUserDialog';
 import { cn } from '../lib/utils';
 
 interface UserRow {
@@ -35,7 +36,9 @@ export function UsersPage() {
   const user = useAuthStore((s) => s.user);
   const queryClient = useQueryClient();
   const [deactivateTarget, setDeactivateTarget] = useState<UserRow | null>(null);
+  const [editTarget, setEditTarget] = useState<UserRow | null>(null);
 
+  const isAdmin = user?.role === Role.ADMIN;
   const canAccess = !!user && MANAGE_ROLES.includes(user.role as (typeof MANAGE_ROLES)[number]);
 
   const { data, isLoading, error } = useQuery({
@@ -61,8 +64,9 @@ export function UsersPage() {
     return canDeactivateUser(actorRole, row.role as Role, isInActorTeam);
   }
 
-  const pageDescription =
-    user?.role === Role.MANAGER
+  const pageDescription = isAdmin
+    ? 'View, edit, and deactivate users across the organization. Admins can update names, contact info, email, role, and passwords.'
+    : user?.role === Role.MANAGER
       ? 'View and deactivate members of your team. Work must be handed over before deactivation.'
       : 'View and deactivate users across the organization. Work must be handed over before deactivation.';
 
@@ -99,18 +103,29 @@ export function UsersPage() {
                     {row.reportsTo ? `${row.reportsTo.firstName} ${row.reportsTo.lastName}` : '—'}
                   </td>
                   <td className="px-4 py-3 text-right">
-                    {canDeactivateTarget(row) ? (
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="text-red-600 border-red-200 hover:bg-red-50"
-                        onClick={() => setDeactivateTarget(row)}
-                      >
-                        <UserMinus className="w-3.5 h-3.5 mr-1" /> Deactivate
-                      </Button>
-                    ) : (
-                      <span className="text-xs text-muted-foreground">—</span>
-                    )}
+                    <div className="inline-flex items-center gap-2 justify-end">
+                      {isAdmin && (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => setEditTarget(row)}
+                        >
+                          <Pencil className="w-3.5 h-3.5 mr-1" /> Edit
+                        </Button>
+                      )}
+                      {canDeactivateTarget(row) ? (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="text-red-600 border-red-200 hover:bg-red-50"
+                          onClick={() => setDeactivateTarget(row)}
+                        >
+                          <UserMinus className="w-3.5 h-3.5 mr-1" /> Deactivate
+                        </Button>
+                      ) : !isAdmin ? (
+                        <span className="text-xs text-muted-foreground">—</span>
+                      ) : null}
+                    </div>
                   </td>
                 </tr>
               ))}
@@ -127,6 +142,20 @@ export function UsersPage() {
             </div>
           )}
         </div>
+      )}
+
+      {editTarget && (
+        <EditUserDialog
+          userId={editTarget.id}
+          userName={`${editTarget.firstName} ${editTarget.lastName}`}
+          open={!!editTarget}
+          onClose={() => setEditTarget(null)}
+          onSuccess={() => {
+            queryClient.invalidateQueries({ queryKey: ['users-manage'] });
+            queryClient.invalidateQueries({ queryKey: ['org-chart'] });
+            queryClient.invalidateQueries({ queryKey: ['users-org-list'] });
+          }}
+        />
       )}
 
       {deactivateTarget && (

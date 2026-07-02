@@ -27,6 +27,10 @@ export const updateUserSchema = z.object({
   timezone: z.string().max(50).optional(),
   isActive: z.boolean().optional(),
   reportsToId: z.string().uuid().nullable().optional(),
+  /** Admin-only fields */
+  email: z.string().email().optional(),
+  password: z.string().min(8).max(128).optional(),
+  role: z.enum(['ADMIN', 'BOSS', 'MANAGER', 'EMPLOYEE', 'INTERN']).optional(),
 });
 
 export type UpdateProfileInput = z.infer<typeof updateProfileSchema>;
