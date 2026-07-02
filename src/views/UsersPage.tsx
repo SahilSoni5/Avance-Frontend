@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { Pencil, UserMinus, Users } from 'lucide-react';
+import { Pencil, Plus, UserMinus, Users } from 'lucide-react';
 import { apiFetch } from '../lib/api';
 import { useAuthStore } from '../stores/auth.store';
 import { Role, canDeactivateUser } from '@crm/shared';
@@ -10,6 +10,7 @@ import { ModulePage, LoadingRows, ErrorMessage } from '../components/ModulePage'
 import { Button } from '../components/ui';
 import { DeactivateUserDialog } from '../components/DeactivateUserDialog';
 import { EditUserDialog } from '../components/EditUserDialog';
+import { AddUserDialog } from '../components/AddUserDialog';
 import { cn } from '../lib/utils';
 
 interface UserRow {
@@ -37,6 +38,7 @@ export function UsersPage() {
   const queryClient = useQueryClient();
   const [deactivateTarget, setDeactivateTarget] = useState<UserRow | null>(null);
   const [editTarget, setEditTarget] = useState<UserRow | null>(null);
+  const [addUserOpen, setAddUserOpen] = useState(false);
 
   const isAdmin = user?.role === Role.ADMIN;
   const canAccess = !!user && MANAGE_ROLES.includes(user.role as (typeof MANAGE_ROLES)[number]);
@@ -65,13 +67,23 @@ export function UsersPage() {
   }
 
   const pageDescription = isAdmin
-    ? 'View, edit, and deactivate users across the organization. Admins can update names, contact info, email, role, and passwords.'
+    ? 'Add, edit, and deactivate users across the organization. Admins can set roles, assign teams, and manage account details.'
     : user?.role === Role.MANAGER
       ? 'View and deactivate members of your team. Work must be handed over before deactivation.'
       : 'View and deactivate users across the organization. Work must be handed over before deactivation.';
 
   return (
-    <ModulePage title="Users" description={pageDescription}>
+    <ModulePage
+      title="Users"
+      description={pageDescription}
+      action={
+        isAdmin ? (
+          <Button onClick={() => setAddUserOpen(true)}>
+            <Plus className="w-4 h-4 mr-1.5" /> Add user
+          </Button>
+        ) : undefined
+      }
+    >
       {isLoading && <LoadingRows />}
       {error && <ErrorMessage error={error} />}
 
@@ -142,6 +154,20 @@ export function UsersPage() {
             </div>
           )}
         </div>
+      )}
+
+      {isAdmin && (
+        <AddUserDialog
+          open={addUserOpen}
+          onClose={() => setAddUserOpen(false)}
+          onSuccess={() => {
+            queryClient.invalidateQueries({ queryKey: ['users-manage'] });
+            queryClient.invalidateQueries({ queryKey: ['org-chart'] });
+            queryClient.invalidateQueries({ queryKey: ['users-org-list'] });
+            queryClient.invalidateQueries({ queryKey: ['teams'] });
+            queryClient.invalidateQueries({ queryKey: ['all-users'] });
+          }}
+        />
       )}
 
       {editTarget && (

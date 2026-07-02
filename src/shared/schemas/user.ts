@@ -1,5 +1,6 @@
 import { z } from 'zod';
-import { RoleEnum } from './auth';
+
+export const userRoleSchema = z.enum(['ADMIN', 'BOSS', 'MANAGER', 'EMPLOYEE', 'INTERN']);
 
 export const updateProfileSchema = z.object({
   firstName: z.string().min(1).max(100).optional(),
@@ -14,7 +15,7 @@ export const createUserSchema = z.object({
   password: z.string().min(8).max(128),
   firstName: z.string().min(1).max(100),
   lastName: z.string().min(1).max(100),
-  role: RoleEnum,
+  role: userRoleSchema,
   reportsToId: z.string().uuid().nullable().optional(),
   phone: z.string().max(20).optional(),
   timezone: z.string().max(50).optional(),
@@ -30,7 +31,7 @@ export const updateUserSchema = z.object({
   /** Admin-only fields */
   email: z.string().email().optional(),
   password: z.string().min(8).max(128).optional(),
-  role: z.enum(['ADMIN', 'BOSS', 'MANAGER', 'EMPLOYEE', 'INTERN']).optional(),
+  role: userRoleSchema.optional(),
 });
 
 export type UpdateProfileInput = z.infer<typeof updateProfileSchema>;
