@@ -61,7 +61,16 @@ export async function apiFetch<T>(path: string, options: RequestInit = {}, retri
   }
 
   if (!res.ok) {
-    throw new Error(data.error?.message ?? 'Request failed');
+    const details = data.error?.details as
+      | { fieldErrors?: Record<string, string[]>; formErrors?: string[] }
+      | undefined;
+    const fieldMsg = details?.fieldErrors
+      ? Object.entries(details.fieldErrors)
+          .flatMap(([field, msgs]) => msgs.map((m) => `${field}: ${m}`))
+          .join('; ')
+      : '';
+    const message = [data.error?.message, fieldMsg].filter(Boolean).join(' — ');
+    throw new Error(message || 'Request failed');
   }
 
   return data as T;
