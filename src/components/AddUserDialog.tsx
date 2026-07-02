@@ -62,17 +62,20 @@ export function AddUserDialog({ open, onClose, onSuccess }: AddUserDialogProps) 
         reportsToId: values.reportsToId || null,
       };
 
-      const res = await apiFetch<{ data: { id: string } }>('/users', {
+      const res = await apiFetch<{ success?: boolean; data: { id: string } }>('/users', {
         method: 'POST',
         body: JSON.stringify(body),
       });
 
       const teamId = values.teamId?.trim();
-      if (teamId && res.data?.id) {
+      const createdUserId = res.data?.id;
+      if (teamId && createdUserId) {
         await apiFetch(`/teams/${teamId}/members`, {
           method: 'POST',
-          body: JSON.stringify({ userId: res.data.id }),
+          body: JSON.stringify({ userId: createdUserId }),
         });
+      } else if (teamId && !createdUserId) {
+        throw new Error('User was created but could not be assigned to the team. Add them manually from the Teams page.');
       }
 
       return res;

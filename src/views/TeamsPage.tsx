@@ -75,14 +75,11 @@ function TeamPanel({ teamId, onClose }: { teamId: string; onClose: () => void })
     queryFn: () => apiFetch<{ data: Team }>(`/teams/${teamId}`),
   });
 
-  const { data: allUsers, refetch: refetchUsers, isFetching: usersFetching } = useQuery({
-    queryKey: ['all-users', user?.role],
+  const { data: addableUsers, refetch: refetchAddableUsers, isFetching: addableUsersFetching } = useQuery({
+    queryKey: ['team-addable-members', teamId],
     queryFn: () =>
-      apiFetch<{ data: TeamMemberUser[] }>(
-        user?.role === 'ADMIN' || user?.role === 'BOSS' || user?.role === 'MANAGER'
-          ? '/users?limit=200&manage=true'
-          : '/users?limit=200'
-      ),
+      apiFetch<{ data: TeamMemberUser[] }>(`/teams/${teamId}/addable-members`),
+    enabled: addMemberOpen,
   });
 
   const updateMutation = useMutation({
@@ -96,8 +93,9 @@ function TeamPanel({ teamId, onClose }: { teamId: string; onClose: () => void })
       apiFetch(`/teams/${teamId}/members`, { method: 'POST', body: JSON.stringify({ userId }) }),
     onSuccess: () => {
       refetch();
-      refetchUsers();
+      void refetchAddableUsers();
       queryClient.invalidateQueries({ queryKey: ['teams'] });
+      queryClient.invalidateQueries({ queryKey: ['team-addable-members', teamId] });
       setAddMemberOpen(false);
     },
   });
@@ -108,11 +106,6 @@ function TeamPanel({ teamId, onClose }: { teamId: string; onClose: () => void })
   });
 
   const team = data?.data;
-  const eligibleAddRoles = user?.role === 'ADMIN'
-    ? ['ADMIN', 'BOSS', 'MANAGER', 'EMPLOYEE', 'INTERN']
-    : user?.role === 'BOSS' || user?.role === 'MANAGER'
-      ? ['EMPLOYEE', 'INTERN']
-      : [];
   const canEdit = user && (
     user.role === 'BOSS' || user.role === 'ADMIN' ||
     (user.role === 'MANAGER' && team?.manager.id === user.id)
@@ -173,8 +166,8 @@ function TeamPanel({ teamId, onClose }: { teamId: string; onClose: () => void })
                 <button
                   type="button"
                   onClick={() => {
-                    void refetchUsers();
                     setAddMemberOpen(true);
+                    void refetchAddableUsers();
                   }}
                   className="flex items-center gap-1 text-xs text-primary hover:underline"
                 >
@@ -207,19 +200,13 @@ function TeamPanel({ teamId, onClose }: { teamId: string; onClose: () => void })
                     : 'Failed to add member'}
                 </p>
               )}
-              {usersFetching ? (
+              {addableUsersFetching ? (
                 <div className="flex items-center gap-2 py-4 text-sm text-muted-foreground">
                   <Loader2 className="w-4 h-4 animate-spin" /> Loading users…
                 </div>
               ) : (
               <div className="space-y-1 max-h-48 overflow-y-auto">
-                {(allUsers?.data ?? [])
-                  .filter(u =>
-                    u.id !== team.manager.id &&
-                    !team.members.some(m => m.userId === u.id) &&
-                    eligibleAddRoles.includes(u.role)
-                  )
-                  .map(u => (
+                {(addableUsers?.data ?? []).map(u => (
                     <button
                       key={u.id}
                       type="button"
@@ -234,13 +221,9 @@ function TeamPanel({ teamId, onClose }: { teamId: string; onClose: () => void })
                       <span className={cn('text-xs px-1.5 py-0.5 rounded-full ml-auto', ROLE_STYLES[u.role] ?? 'bg-muted')}>{u.role}</span>
                     </button>
                   ))}
-                {(allUsers?.data ?? []).filter(u =>
-                  u.id !== team.manager.id &&
-                  !team.members.some(m => m.userId === u.id) &&
-                  eligibleAddRoles.includes(u.role)
-                ).length === 0 && (
+                {(addableUsers?.data ?? []).length === 0 && (
                   <p className="text-sm text-muted-foreground py-2">
-                    No eligible users to add. Create users on the Users page first (Employee or Intern roles work best for teams).
+                    No eligible users to add. Create users on the Users page as Employee or Intern (Employees need a manager under Reports to).
                   </p>
                 )}
               </div>
