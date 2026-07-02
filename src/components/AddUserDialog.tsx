@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { Loader2, UserPlus } from 'lucide-react';
 import { apiFetch } from '../lib/api';
@@ -35,6 +35,8 @@ const ROLE_OPTIONS = [
 ];
 
 export function AddUserDialog({ open, onClose, onSuccess }: AddUserDialogProps) {
+  const [formError, setFormError] = useState('');
+
   const { data: orgUsersData, isLoading: usersLoading } = useQuery({
     queryKey: ['users-org-list'],
     queryFn: () => apiFetch<{ data: OrgUser[] }>('/users?limit=200&manage=true'),
@@ -82,8 +84,20 @@ export function AddUserDialog({ open, onClose, onSuccess }: AddUserDialogProps) 
   });
 
   useEffect(() => {
-    if (!open) createMutation.reset();
+    if (!open) {
+      createMutation.reset();
+      setFormError('');
+    }
   }, [open, createMutation]);
+
+  function handleSubmit(values: Record<string, string>) {
+    if (values.role === 'EMPLOYEE' && !values.reportsToId?.trim()) {
+      setFormError('Employees must have a manager selected under Reports to.');
+      return;
+    }
+    setFormError('');
+    createMutation.mutate(values);
+  }
 
   const managerOptions = (orgUsersData?.data ?? []).map((u) => ({
     value: u.id,
@@ -106,9 +120,12 @@ export function AddUserDialog({ open, onClose, onSuccess }: AddUserDialogProps) 
         </div>
       ) : (
         <>
-          {createMutation.error && (
+          {(createMutation.error || formError) && (
             <p className="text-sm text-red-600 mb-4">
-              {createMutation.error instanceof Error ? createMutation.error.message : 'Failed to create user'}
+              {formError ||
+                (createMutation.error instanceof Error
+                  ? createMutation.error.message
+                  : 'Failed to create user')}
             </p>
           )}
 
@@ -154,12 +171,12 @@ export function AddUserDialog({ open, onClose, onSuccess }: AddUserDialogProps) 
             loading={createMutation.isPending}
             submitLabel="Create user"
             onCancel={onClose}
-            onSubmit={(values) => createMutation.mutate(values as Record<string, string>)}
+            onSubmit={(values) => handleSubmit(values as Record<string, string>)}
           />
 
           <p className="text-xs text-muted-foreground mt-4 flex items-center gap-1">
             <UserPlus className="w-3 h-3" />
-            New users can be assigned to a team immediately after creation.
+            Use Employee or Intern role for team members. Employees need a manager under Reports to.
           </p>
         </>
       )}

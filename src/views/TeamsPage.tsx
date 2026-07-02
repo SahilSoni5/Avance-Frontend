@@ -75,9 +75,14 @@ function TeamPanel({ teamId, onClose }: { teamId: string; onClose: () => void })
     queryFn: () => apiFetch<{ data: Team }>(`/teams/${teamId}`),
   });
 
-  const { data: allUsers } = useQuery({
-    queryKey: ['all-users'],
-    queryFn: () => apiFetch<{ data: TeamMemberUser[] }>('/users?limit=200'),
+  const { data: allUsers, refetch: refetchUsers, isFetching: usersFetching } = useQuery({
+    queryKey: ['all-users', user?.role],
+    queryFn: () =>
+      apiFetch<{ data: TeamMemberUser[] }>(
+        user?.role === 'ADMIN' || user?.role === 'BOSS' || user?.role === 'MANAGER'
+          ? '/users?limit=200&manage=true'
+          : '/users?limit=200'
+      ),
   });
 
   const updateMutation = useMutation({
@@ -89,7 +94,12 @@ function TeamPanel({ teamId, onClose }: { teamId: string; onClose: () => void })
   const addMemberMutation = useMutation({
     mutationFn: (userId: string) =>
       apiFetch(`/teams/${teamId}/members`, { method: 'POST', body: JSON.stringify({ userId }) }),
-    onSuccess: () => { refetch(); setAddMemberOpen(false); },
+    onSuccess: () => {
+      refetch();
+      refetchUsers();
+      queryClient.invalidateQueries({ queryKey: ['teams'] });
+      setAddMemberOpen(false);
+    },
   });
 
   const removeMemberMutation = useMutation({
@@ -160,8 +170,14 @@ function TeamPanel({ teamId, onClose }: { teamId: string; onClose: () => void })
             <div className="flex items-center justify-between mb-2">
               <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Team Members</h4>
               {canEdit && (
-                <button type="button" onClick={() => setAddMemberOpen(true)}
-                  className="flex items-center gap-1 text-xs text-primary hover:underline">
+                <button
+                  type="button"
+                  onClick={() => {
+                    void refetchUsers();
+                    setAddMemberOpen(true);
+                  }}
+                  className="flex items-center gap-1 text-xs text-primary hover:underline"
+                >
                   <UserPlus className="w-3.5 h-3.5" /> Add Member
                 </button>
               )}
@@ -184,6 +200,18 @@ function TeamPanel({ teamId, onClose }: { teamId: string; onClose: () => void })
           {addMemberOpen && (
             <div className="bg-muted/30 rounded-xl p-4">
               <p className="text-sm font-semibold text-foreground mb-3">Add Member</p>
+              {addMemberMutation.error && (
+                <p className="text-sm text-red-600 mb-3">
+                  {addMemberMutation.error instanceof Error
+                    ? addMemberMutation.error.message
+                    : 'Failed to add member'}
+                </p>
+              )}
+              {usersFetching ? (
+                <div className="flex items-center gap-2 py-4 text-sm text-muted-foreground">
+                  <Loader2 className="w-4 h-4 animate-spin" /> Loading users…
+                </div>
+              ) : (
               <div className="space-y-1 max-h-48 overflow-y-auto">
                 {(allUsers?.data ?? [])
                   .filter(u =>
@@ -195,8 +223,9 @@ function TeamPanel({ teamId, onClose }: { teamId: string; onClose: () => void })
                     <button
                       key={u.id}
                       type="button"
+                      disabled={addMemberMutation.isPending}
                       onClick={() => addMemberMutation.mutate(u.id)}
-                      className="w-full flex items-center gap-2 px-3 py-2 rounded-xl hover:bg-muted transition-colors text-sm text-foreground"
+                      className="w-full flex items-center gap-2 px-3 py-2 rounded-xl hover:bg-muted transition-colors text-sm text-foreground disabled:opacity-50"
                     >
                       <div className="w-7 h-7 rounded-full bg-gradient-to-br from-indigo-400 to-violet-500 flex items-center justify-center text-white text-xs font-bold">
                         {u.firstName[0]}{u.lastName[0]}
@@ -205,7 +234,17 @@ function TeamPanel({ teamId, onClose }: { teamId: string; onClose: () => void })
                       <span className={cn('text-xs px-1.5 py-0.5 rounded-full ml-auto', ROLE_STYLES[u.role] ?? 'bg-muted')}>{u.role}</span>
                     </button>
                   ))}
+                {(allUsers?.data ?? []).filter(u =>
+                  u.id !== team.manager.id &&
+                  !team.members.some(m => m.userId === u.id) &&
+                  eligibleAddRoles.includes(u.role)
+                ).length === 0 && (
+                  <p className="text-sm text-muted-foreground py-2">
+                    No eligible users to add. Create users on the Users page first (Employee or Intern roles work best for teams).
+                  </p>
+                )}
               </div>
+              )}
               <button type="button" onClick={() => setAddMemberOpen(false)} className="text-sm text-muted-foreground hover:text-foreground mt-2">Cancel</button>
             </div>
           )}
@@ -259,8 +298,13 @@ export function TeamsPage() {
   });
 
   const { data: allUsers } = useQuery({
-    queryKey: ['all-users'],
-    queryFn: () => apiFetch<{ data: TeamMemberUser[] }>('/users?limit=200'),
+    queryKey: ['all-users', user?.role],
+    queryFn: () =>
+      apiFetch<{ data: TeamMemberUser[] }>(
+        user?.role === 'ADMIN' || user?.role === 'BOSS'
+          ? '/users?limit=200&manage=true'
+          : '/users?limit=200'
+      ),
     enabled: user?.role === 'BOSS' || user?.role === 'ADMIN',
   });
 
