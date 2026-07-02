@@ -44,7 +44,15 @@ export async function apiFetch<T>(path: string, options: RequestInit = {}, retri
     credentials: 'include',
   });
 
-  let data: { success?: boolean; error?: { message?: string; code?: string }; data?: T };
+  let data: {
+    success?: boolean;
+    error?: {
+      message?: string;
+      code?: string;
+      details?: { fieldErrors?: Record<string, string[]>; formErrors?: string[] };
+    };
+    data?: T;
+  };
   try {
     data = await res.json();
   } catch {
@@ -61,9 +69,7 @@ export async function apiFetch<T>(path: string, options: RequestInit = {}, retri
   }
 
   if (!res.ok) {
-    const details = data.error?.details as
-      | { fieldErrors?: Record<string, string[]>; formErrors?: string[] }
-      | undefined;
+    const details = data.error?.details;
     const fieldMsg = details?.fieldErrors
       ? Object.entries(details.fieldErrors)
           .flatMap(([field, msgs]) => msgs.map((m) => `${field}: ${m}`))
