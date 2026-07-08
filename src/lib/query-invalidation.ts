@@ -10,6 +10,8 @@ export function invalidateContactBrandSync(
   if (opts?.accountId) {
     queryClient.invalidateQueries({ queryKey: ['brand-pocs', opts.accountId] });
     queryClient.invalidateQueries({ queryKey: ['brand-detail', opts.accountId] });
+    queryClient.invalidateQueries({ queryKey: ['brand-updates', opts.accountId] });
+    queryClient.invalidateQueries({ queryKey: ['brand-pipeline', opts.accountId] });
   }
   if (opts?.contactId) {
     queryClient.invalidateQueries({ queryKey: ['contact-detail', opts.contactId] });

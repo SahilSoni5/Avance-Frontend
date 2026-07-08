@@ -1,17 +1,21 @@
 'use client';
 
 import { useState } from 'react';
+import Link from 'next/link';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   Plus, Search, Building2, Users2, Briefcase, Globe, Phone, Mail,
-  X, ExternalLink, Loader2, UserPlus,
+  X, ExternalLink, Loader2, UserPlus, Edit, Trash2,
 } from 'lucide-react';
 import { apiFetch } from '../lib/api';
-import { formatCurrencyINR, formatDateIST } from '../lib/locale';
 import { useAuthStore } from '../stores/auth.store';
+import { hasPermission } from '@crm/shared';
 import { Button } from '../components/ui';
 import { Sheet } from '../components/ui/Sheet';
 import { BrandFormDialog, type PocFormRow } from '../components/BrandFormDialog';
+import { BrandEditDialog, type BrandEditValues } from '../components/BrandEditDialog';
+import { BrandUpdatesSection } from '../components/BrandUpdatesSection';
+import { PipelineRecordCard, type PipelineRecord } from '../components/related/PipelineRecordCard';
 import { invalidateContactBrandSync } from '../lib/query-invalidation';
 import { cn } from '../lib/utils';
 
@@ -40,16 +44,11 @@ interface Poc {
   owner: AccountOwner;
 }
 
-interface PipelineDeal {
-  id: string; name: string; value: number | null; stage: string;
-  closeDate: string | null; probability: number | null;
-  visible: boolean;
-  owner: AccountOwner;
-}
-
 interface AccountPipelineData {
-  activeDeals: PipelineDeal[];
-  closedDeals: PipelineDeal[];
+  activeDeals: PipelineRecord[];
+  closedDeals: PipelineRecord[];
+  activeOpportunities: PipelineRecord[];
+  closedOpportunities: PipelineRecord[];
 }
 
 // --- Helpers ---
@@ -147,13 +146,25 @@ function BrandPanel({
   accountId,
   onClose,
   onAddPoc,
+  onEdit,
+  onDelete,
+  canUpdate,
+  canDelete,
+  canAddPoc,
+  canPostUpdates,
+  deleting,
 }: {
   accountId: string;
   onClose: () => void;
   onAddPoc: (brandId: string) => void;
+  onEdit: (brandId: string) => void;
+  onDelete: (brandId: string, brandName: string) => void;
+  canUpdate: boolean;
+  canDelete: boolean;
+  canAddPoc: boolean;
+  canPostUpdates: boolean;
+  deleting?: boolean;
 }) {
-  const user = useAuthStore(s => s.user);
-
   const { data: accountData, isLoading: acctLoading } = useQuery({
     queryKey: ['brand-detail', accountId],
     queryFn: () => apiFetch<{ data: Account }>(`/brands/${accountId}`),
@@ -175,12 +186,14 @@ function BrandPanel({
   const account = accountData?.data;
   const pocs = pocsData?.data ?? [];
   const pipeline = pipelineData?.data;
-  const canAddPoc = user && ['ADMIN', 'BOSS', 'MANAGER', 'EMPLOYEE'].includes(user.role);
 
   const activeDeals = pipeline?.activeDeals ?? [];
+  const activeOpportunities = pipeline?.activeOpportunities ?? [];
   const closedDeals = pipeline?.closedDeals ?? [];
-  const visibleActiveDeals = activeDeals.filter(d => d.visible);
-  const hiddenDeals = activeDeals.filter(d => !d.visible);
+  const closedOpportunities = pipeline?.closedOpportunities ?? [];
+  const activePipeline = [...activeOpportunities, ...activeDeals];
+  const visibleActivePipeline = activePipeline.filter((r) => r.visible);
+  const hiddenPipeline = activePipeline.filter((r) => !r.visible);
 
   return (
     <Sheet open onClose={onClose} title={account?.name ?? 'Loading...'}>
@@ -191,13 +204,48 @@ function BrandPanel({
       )}
       {account && (
         <div className="px-6 py-4 space-y-6">
+          {(canUpdate || canDelete) && (
+            <div className="flex items-center justify-end gap-2 -mt-1">
+              {canUpdate && (
+                <Button size="sm" variant="outline" onClick={() => onEdit(accountId)}>
+                  <Edit className="w-3.5 h-3.5 mr-1" /> Edit
+                </Button>
+              )}
+              {canDelete && (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  disabled={deleting}
+                  onClick={() => onDelete(accountId, account.name)}
+                  className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                >
+                  <Trash2 className="w-3.5 h-3.5 mr-1" /> Delete
+                </Button>
+              )}
+            </div>
+          )}
+
           {/* Header */}
           <div className="flex items-start gap-4">
             <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-sky-400 to-cyan-500 flex items-center justify-center text-white font-bold text-lg shrink-0">
               {initials(account.name)}
             </div>
             <div className="flex-1 min-w-0">
-              <h3 className="text-lg font-bold text-foreground">{account.name}</h3>
+              <div className="flex items-center gap-2 flex-wrap">
+                <Link
+                  href={`/brands/${accountId}`}
+                  className="text-lg font-bold text-foreground hover:text-primary hover:underline"
+                >
+                  {account.name}
+                </Link>
+                <Link
+                  href={`/brands/${accountId}`}
+                  className="text-muted-foreground hover:text-primary"
+                  aria-label="Open full brand record"
+                >
+                  <ExternalLink className="w-4 h-4" />
+                </Link>
+              </div>
               {account.industry && (
                 <span className={cn('inline-block text-xs px-2 py-0.5 rounded-full font-medium mt-1', INDUSTRY_COLORS[account.industry] ?? INDUSTRY_COLORS.Other)}>
                   {account.industry}
@@ -250,7 +298,12 @@ function BrandPanel({
                   <div key={poc.id} className="p-3 bg-muted/40 rounded-xl border border-border/40">
                     <div className="flex items-start justify-between gap-2">
                       <div>
-                        <p className="text-sm font-medium text-foreground">{poc.firstName} {poc.lastName}</p>
+                        <Link
+                          href={`/contacts/${poc.id}`}
+                          className="text-sm font-medium text-primary hover:underline"
+                        >
+                          {poc.firstName} {poc.lastName}
+                        </Link>
                         {poc.jobTitle && <p className="text-xs text-muted-foreground">{poc.jobTitle}</p>}
                         <div className="flex gap-3 mt-1 text-xs text-muted-foreground">
                           {poc.emails[0]?.email && (
@@ -287,49 +340,38 @@ function BrandPanel({
           {/* Pipeline */}
           <section>
             <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">Active Pipeline</h4>
-            {activeDeals.length === 0 ? (
-              <p className="text-sm text-muted-foreground italic">No active deals.</p>
+            {activePipeline.length === 0 ? (
+              <p className="text-sm text-muted-foreground italic">No active opportunities or deals.</p>
             ) : (
               <div className="space-y-2">
-                {visibleActiveDeals.map(deal => (
-                  <div key={deal.id} className="p-3 bg-muted/40 rounded-xl border border-border/40">
-                    <p className="text-sm font-medium text-foreground">{deal.name}</p>
-                    <div className="flex items-center gap-3 mt-1 text-xs text-muted-foreground flex-wrap">
-                      <span className="px-2 py-0.5 bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-300 rounded-full">{deal.stage}</span>
-                      {deal.value != null && <span className="font-semibold text-foreground">{formatCurrencyINR(deal.value)}</span>}
-                      {deal.closeDate && <span>Closes {formatDateIST(deal.closeDate)}</span>}
-                      {deal.probability != null && <span>{deal.probability}% probability</span>}
-                    </div>
-                    <p className="text-xs text-muted-foreground mt-1">Owner: {deal.owner.firstName} {deal.owner.lastName}</p>
-                  </div>
+                {visibleActivePipeline.map((record) => (
+                  <PipelineRecordCard key={`${record.recordType}-${record.id}`} record={record} />
                 ))}
-                {hiddenDeals.length > 0 && (
+                {hiddenPipeline.length > 0 && (
                   <p className="text-sm text-muted-foreground italic bg-muted/30 p-3 rounded-xl">
                     This brand is being actively worked on by{' '}
-                    <span className="font-medium text-foreground">{hiddenDeals[0].owner.firstName} {hiddenDeals[0].owner.lastName}</span>
-                    {hiddenDeals.length > 1 && ` and ${hiddenDeals.length - 1} others`}
+                    <span className="font-medium text-foreground">
+                      {hiddenPipeline[0].owner.firstName} {hiddenPipeline[0].owner.lastName}
+                    </span>
+                    {hiddenPipeline.length > 1 && ` and ${hiddenPipeline.length - 1} others`}
                   </p>
                 )}
               </div>
             )}
+
+            <BrandUpdatesSection accountId={accountId} canPost={canPostUpdates} />
           </section>
 
-          {/* Previous Deals */}
-          {closedDeals.length > 0 && (
+          {/* Previous Deals / Closed Opportunities */}
+          {(closedDeals.length > 0 || closedOpportunities.length > 0) && (
             <section>
-              <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">Previous Deals</h4>
+              <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">Closed Pipeline</h4>
               <div className="space-y-2">
-                {closedDeals.filter(d => d.visible).map(deal => (
-                  <div key={deal.id} className="p-3 bg-muted/30 rounded-xl border border-border/30">
-                    <p className="text-sm font-medium text-foreground">{deal.name}</p>
-                    <div className="flex items-center gap-2 mt-1 text-xs text-muted-foreground">
-                      <span className={cn('px-2 py-0.5 rounded-full', deal.stage === 'WON' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700')}>{deal.stage}</span>
-                      {deal.value != null && <span>{formatCurrencyINR(deal.value)}</span>}
-                    </div>
-                  </div>
+                {[...closedOpportunities, ...closedDeals].filter((r) => r.visible).map((record) => (
+                  <PipelineRecordCard key={`${record.recordType}-${record.id}`} record={record} compact />
                 ))}
-                {closedDeals.some(d => !d.visible) && (
-                  <p className="text-xs text-muted-foreground italic">Some past deals are hidden based on your scope.</p>
+                {[...closedOpportunities, ...closedDeals].some((r) => !r.visible) && (
+                  <p className="text-xs text-muted-foreground italic">Some closed records are hidden based on your scope.</p>
                 )}
               </div>
             </section>
@@ -350,6 +392,8 @@ export function AccountsPage() {
   const [formOpen, setFormOpen] = useState(false);
   const [formMode, setFormMode] = useState<'new' | 'existing'>('new');
   const [formBrandId, setFormBrandId] = useState('');
+  const [editBrandId, setEditBrandId] = useState<string | null>(null);
+  const [editError, setEditError] = useState<string | null>(null);
 
   const { data, isLoading, error } = useQuery({
     queryKey: ['brands', search, industryFilter],
@@ -403,6 +447,38 @@ export function AccountsPage() {
     },
   });
 
+  const updateMutation = useMutation({
+    mutationFn: ({ brandId, values }: { brandId: string; values: BrandEditValues }) =>
+      apiFetch(`/brands/${brandId}`, {
+        method: 'PATCH',
+        body: JSON.stringify({
+          name: values.name,
+          ...(values.industry ? { industry: values.industry } : { industry: null }),
+          ...(values.website ? { website: values.website } : { website: null }),
+          ...(values.phone ? { phone: values.phone } : { phone: null }),
+          ...(values.email ? { email: values.email } : { email: null }),
+          ...(values.address ? { address: values.address } : { address: null }),
+          ...(values.status ? { status: values.status } : { status: null }),
+        }),
+      }),
+    onSuccess: (_res, variables) => {
+      invalidateContactBrandSync(queryClient, { accountId: variables.brandId });
+      setEditBrandId(null);
+      setEditError(null);
+    },
+    onError: (err: Error) => setEditError(err.message),
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: (brandId: string) =>
+      apiFetch(`/brands/${brandId}`, { method: 'DELETE' }),
+    onSuccess: (_res, brandId) => {
+      invalidateContactBrandSync(queryClient, { accountId: brandId });
+      setSelectedId(null);
+      setEditBrandId(null);
+    },
+  });
+
   function openNewBrand() {
     setFormMode('new');
     setFormBrandId('');
@@ -415,9 +491,28 @@ export function AccountsPage() {
     setFormOpen(true);
   }
 
+  function openEditBrand(brandId: string) {
+    setEditError(null);
+    setEditBrandId(brandId);
+  }
+
+  function handleDeleteBrand(brandId: string, brandName: string) {
+    if (!window.confirm(`Delete brand "${brandName}"? This cannot be undone.`)) return;
+    deleteMutation.mutate(brandId);
+  }
+
   const brands = data?.data ?? [];
   const scopeLabel = data?.scope ?? '';
-  const canCreate = user && ['ADMIN', 'BOSS', 'MANAGER', 'EMPLOYEE'].includes(user.role);
+  const canCreate = user && hasPermission(user.role, 'brands', 'create');
+  const canUpdate = user && hasPermission(user.role, 'brands', 'update');
+  const canDelete = user && hasPermission(user.role, 'brands', 'delete');
+  const canPostUpdates = user && hasPermission(user.role, 'brands', 'update');
+
+  const { data: editBrandData } = useQuery({
+    queryKey: ['brand-detail', editBrandId],
+    queryFn: () => apiFetch<{ data: Account }>(`/brands/${editBrandId}`),
+    enabled: !!editBrandId,
+  });
 
   return (
     <div className="flex-1 flex flex-col min-h-0">
@@ -524,8 +619,40 @@ export function AccountsPage() {
           accountId={selectedId}
           onClose={() => setSelectedId(null)}
           onAddPoc={openAddPoc}
+          onEdit={openEditBrand}
+          onDelete={handleDeleteBrand}
+          canUpdate={!!canUpdate}
+          canDelete={!!canDelete}
+          canAddPoc={!!canCreate}
+          canPostUpdates={!!canPostUpdates}
+          deleting={deleteMutation.isPending}
         />
       )}
+
+      <BrandEditDialog
+        open={!!editBrandId && !!editBrandData?.data}
+        onClose={() => {
+          setEditBrandId(null);
+          setEditError(null);
+        }}
+        industries={INDUSTRIES}
+        initial={{
+          name: editBrandData?.data.name ?? '',
+          industry: editBrandData?.data.industry ?? '',
+          website: editBrandData?.data.website ?? '',
+          phone: editBrandData?.data.phone ?? '',
+          email: editBrandData?.data.email ?? '',
+          address: editBrandData?.data.address ?? '',
+          status: editBrandData?.data.status ?? '',
+        }}
+        loading={updateMutation.isPending}
+        error={editError}
+        onSave={(values) => {
+          if (!editBrandId) return;
+          setEditError(null);
+          updateMutation.mutate({ brandId: editBrandId, values });
+        }}
+      />
 
       <BrandFormDialog
         open={formOpen}

@@ -16,7 +16,19 @@ export function ProtectedRoute({ children }: { children: ReactNode }) {
       setSessionReady(true);
       return;
     }
-    bootstrapSession().finally(() => setSessionReady(true));
+    let settled = false;
+    const settle = () => {
+      if (settled) return;
+      settled = true;
+      setSessionReady(true);
+    };
+    const safetyTimer = window.setTimeout(settle, 10000);
+    void bootstrapSession().finally(() => {
+      settle();
+      window.clearTimeout(safetyTimer);
+    });
+    // Do not clear safetyTimer on cleanup — React Strict Mode remount must not
+    // cancel the only escape hatch when bootstrap hangs.
   }, [hasHydrated]);
 
   useEffect(() => {

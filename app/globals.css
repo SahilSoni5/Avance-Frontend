@@ -2,6 +2,28 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Salesforce Lightning — opportunity record page */
+@font-face {
+  font-family: 'Salesforce Sans';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Salesforce Sans'), local('Segoe UI'), local(Roboto);
+}
+
+.opportunity-page {
+  font-family: 'Salesforce Sans', -apple-system, 'Segoe UI', Roboto, sans-serif;
+}
+
+.sf-list-header {
+  box-shadow: 0 2px 2px rgba(0, 0, 0, 0.05);
+}
+
+.opportunity-page .sf-record-header {
+  background: linear-gradient(180deg, #ffffff 0%, #f8f8f8 100%);
+  border-bottom: 1px solid #c9c9c9;
+}
+
 @layer base {
   :root {
     /* Warm beige light theme */

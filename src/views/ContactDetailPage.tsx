@@ -7,11 +7,12 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Edit, UserPlus, GitMerge } from 'lucide-react';
 import { apiFetch } from '../lib/api';
 import { formatDateTimeIST } from '../lib/locale';
-import { ModulePage, LoadingRows, ErrorMessage, formatCurrency, StatusBadge, OwnerCell } from '../components/ModulePage';
+import { ModulePage, LoadingRows, ErrorMessage, StatusBadge, OwnerCell } from '../components/ModulePage';
 import { Breadcrumbs } from '../components/Breadcrumbs';
 import { Button, Dialog, SectionCard, Badge } from '../components/ui';
 import { ContactFormDialog, contactFormToApiBody, type ContactFormValues } from '../components/ContactFormDialog';
 import { RecordForm } from '../components/RecordForm';
+import { PipelineRecordCard, type PipelineRecord } from '../components/related/PipelineRecordCard';
 import { invalidateContactBrandSync } from '../lib/query-invalidation';
 
 interface ContactDetail {
@@ -33,6 +34,8 @@ interface ContactDetail {
   pipeline?: {
     activeDeals: Array<{ id: string; name?: string; value?: string; stage?: string; owner: { firstName: string; lastName: string }; visible: boolean }>;
     closedDeals: Array<{ id: string; name?: string; value?: string; stage?: string; owner: { firstName: string; lastName: string }; visible: boolean }>;
+    activeOpportunities?: PipelineRecord[];
+    closedOpportunities?: PipelineRecord[];
   };
   activities: Array<{ id: string; type: string; description: string | null; subject?: string; createdAt: string }>;
   notes: Array<{ id: string; content: string; createdAt: string; user: { firstName: string; lastName: string } }>;
@@ -108,6 +111,35 @@ export function ContactDetailPage() {
     g.primary.id === id || g.duplicates.some((d) => d.id === id)
   );
 
+  const activePipeline: PipelineRecord[] = [
+    ...(contact?.pipeline?.activeOpportunities ?? []).filter((o) => o.visible && o.name && o.stage),
+    ...(contact?.pipeline?.activeDeals ?? [])
+      .filter((d) => d.visible && d.name && d.stage)
+      .map((d) => ({
+        id: d.id,
+        name: d.name!,
+        value: d.value ?? null,
+        stage: d.stage!,
+        visible: d.visible,
+        recordType: 'deal' as const,
+        owner: d.owner,
+      })),
+  ];
+  const closedPipeline: PipelineRecord[] = [
+    ...(contact?.pipeline?.closedOpportunities ?? []).filter((o) => o.visible && o.name && o.stage),
+    ...(contact?.pipeline?.closedDeals ?? [])
+      .filter((d) => d.visible && d.name && d.stage)
+      .map((d) => ({
+        id: d.id,
+        name: d.name!,
+        value: d.value ?? null,
+        stage: d.stage!,
+        visible: d.visible,
+        recordType: 'deal' as const,
+        owner: d.owner,
+      })),
+  ];
+
   if (isLoading) return <ModulePage title="Contact"><LoadingRows /></ModulePage>;
   if (error || !contact) return <ModulePage title="Contact"><ErrorMessage error={error ?? 'Not found'} /></ModulePage>;
 
@@ -126,6 +158,33 @@ export function ContactDetailPage() {
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2 space-y-6">
+          {(activePipeline.length > 0 || closedPipeline.length > 0) && (
+            <SectionCard title="Related Pipeline">
+              <div className="space-y-4 -mt-2">
+                {activePipeline.length > 0 && (
+                  <div>
+                    <h4 className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">Active</h4>
+                    <div className="space-y-2">
+                      {activePipeline.map((record) => (
+                        <PipelineRecordCard key={`${record.recordType}-${record.id}`} record={record} />
+                      ))}
+                    </div>
+                  </div>
+                )}
+                {closedPipeline.length > 0 && (
+                  <div>
+                    <h4 className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">Closed</h4>
+                    <div className="space-y-2">
+                      {closedPipeline.map((record) => (
+                        <PipelineRecordCard key={`${record.recordType}-${record.id}`} record={record} compact />
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </SectionCard>
+          )}
+
           <SectionCard title="Timeline">
             <div className="space-y-4 -mt-2">
               {contact.activities?.length ? contact.activities.map((a) => (
@@ -153,31 +212,6 @@ export function ContactDetailPage() {
             </div>
           </SectionCard>
 
-          <SectionCard title="Deals">
-            <div className="space-y-2 -mt-2">
-              {[...(contact.pipeline?.activeDeals ?? []), ...(contact.pipeline?.closedDeals ?? [])].length ? (
-                [...(contact.pipeline?.activeDeals ?? []), ...(contact.pipeline?.closedDeals ?? [])].map((deal) =>
-                  deal.visible ? (
-                    <Link
-                      key={deal.id}
-                      href={`/deals/${deal.id}`}
-                      className="flex items-center justify-between p-3 rounded-lg hover:bg-muted dark:hover:bg-slate-800/50"
-                    >
-                      <span className="font-medium text-sm">{deal.name}</span>
-                      <div className="flex items-center gap-2">
-                        {deal.value != null && <span className="text-sm text-slate-500">{formatCurrency(deal.value)}</span>}
-                        {deal.stage && <Badge>{deal.stage}</Badge>}
-                      </div>
-                    </Link>
-                  ) : (
-                    <div key={deal.id} className="p-3 rounded-lg bg-muted/50 text-sm text-slate-500 italic">
-                      Deal handled by {deal.owner.firstName} {deal.owner.lastName}
-                    </div>
-                  )
-                )
-              ) : <p className="text-sm text-slate-500">No linked deals</p>}
-            </div>
-          </SectionCard>
         </div>
 
         <div className="space-y-6">

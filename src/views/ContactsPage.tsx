@@ -1,16 +1,18 @@
 'use client';
 
 import { useState, useCallback } from 'react';
+import Link from 'next/link';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   Plus, Search, User2, Phone, Mail, Briefcase, Building2,
   X, ExternalLink, CheckCircle2, Loader2,
 } from 'lucide-react';
 import { apiFetch } from '../lib/api';
-import { formatCurrencyINR, formatDateIST, formatNumberIN } from '../lib/locale';
+import { formatDateIST, formatNumberIN } from '../lib/locale';
 import { Button } from '../components/ui';
 import { Sheet } from '../components/ui/Sheet';
 import { ContactFormDialog, contactFormToApiBody, type ContactFormValues } from '../components/ContactFormDialog';
+import { PipelineRecordCard, type PipelineRecord } from '../components/related/PipelineRecordCard';
 import { invalidateContactBrandSync } from '../lib/query-invalidation';
 import { cn } from '../lib/utils';
 
@@ -32,8 +34,8 @@ interface Contact {
 
 interface Deal {
   id: string; name?: string; value?: number | string | null; stage?: string;
-  closeDate: string | null; probability: number | null;
-  owner: ContactOwner; visible: boolean;
+  closeDate?: string | null; probability?: number | null;
+  owner: ContactOwner; visible: boolean; recordType?: 'deal' | 'opportunity';
 }
 
 interface TouchPoint {
@@ -45,7 +47,12 @@ interface TouchPoint {
 
 interface ContactDetail extends Contact {
   touchPoints: TouchPoint[];
-  pipeline: { activeDeals: Deal[]; closedDeals: Deal[] };
+  pipeline: {
+    activeDeals: Deal[];
+    closedDeals: Deal[];
+    activeOpportunities?: PipelineRecord[];
+    closedOpportunities?: PipelineRecord[];
+  };
   activities?: { id: string; type: string; description: string | null; subject?: string; createdAt: string; user?: ContactOwner }[];
   notes?: { id: string; content: string; createdAt: string; user: ContactOwner }[];
 }
@@ -130,7 +137,13 @@ function ContactCard({ contact, onClick }: { contact: Contact; onClick: () => vo
       {contact.account && (
         <div className="flex items-center gap-1.5 mb-2">
           <Building2 className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
-          <span className="text-xs text-muted-foreground truncate">{contact.account.name}</span>
+          <Link
+            href={`/brands/${contact.account.id}`}
+            className="text-xs text-primary hover:underline truncate"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {contact.account.name}
+          </Link>
         </div>
       )}
 
@@ -172,6 +185,68 @@ function ContactPanel({ contactId, onClose }: {
   const industry = contact?.account?.industry;
   const activeDeals = contact?.pipeline?.activeDeals ?? [];
   const pastDeals = contact?.pipeline?.closedDeals ?? [];
+  const activeOpportunities = contact?.pipeline?.activeOpportunities ?? [];
+  const closedOpportunities = contact?.pipeline?.closedOpportunities ?? [];
+  const activePipeline: PipelineRecord[] = [
+    ...activeOpportunities
+      .filter((o) => o.visible && o.name && o.stage)
+      .map((o) => ({
+        id: o.id,
+        name: o.name,
+        value: o.value ?? null,
+        stage: o.stage,
+        closeDate: o.closeDate,
+        probability: o.probability,
+        visible: o.visible,
+        recordType: 'opportunity' as const,
+        owner: o.owner,
+      })),
+    ...activeDeals
+      .filter((d) => d.visible && d.name && d.stage)
+      .map((d) => ({
+        id: d.id,
+        name: d.name!,
+        value: d.value ?? null,
+        stage: d.stage!,
+        closeDate: d.closeDate,
+        probability: d.probability,
+        visible: d.visible,
+        recordType: 'deal' as const,
+        owner: d.owner,
+      })),
+  ];
+  const closedPipeline: PipelineRecord[] = [
+    ...closedOpportunities
+      .filter((o) => o.visible && o.name && o.stage)
+      .map((o) => ({
+        id: o.id,
+        name: o.name,
+        value: o.value ?? null,
+        stage: o.stage,
+        closeDate: o.closeDate,
+        probability: o.probability,
+        visible: o.visible,
+        recordType: 'opportunity' as const,
+        owner: o.owner,
+      })),
+    ...pastDeals
+      .filter((d) => d.visible && d.name && d.stage)
+      .map((d) => ({
+        id: d.id,
+        name: d.name!,
+        value: d.value ?? null,
+        stage: d.stage!,
+        closeDate: d.closeDate,
+        probability: d.probability,
+        visible: d.visible,
+        recordType: 'deal' as const,
+        owner: d.owner,
+      })),
+  ];
+  const hiddenPipeline = [
+    ...activeOpportunities.filter((o) => !o.visible),
+    ...activeDeals.filter((d) => !d.visible),
+  ];
   const touchPoints = contact?.touchPoints ?? [];
 
   return (
@@ -189,12 +264,28 @@ function ContactPanel({ contactId, onClose }: {
               {initials(contact.firstName, contact.lastName)}
             </div>
             <div className="flex-1 min-w-0">
-              <h3 className="text-lg font-bold text-foreground">{contact.firstName} {contact.lastName}</h3>
+              <div className="flex items-center gap-2 flex-wrap">
+                <Link
+                  href={`/contacts/${contactId}`}
+                  className="text-lg font-bold text-foreground hover:text-primary hover:underline"
+                >
+                  {contact.firstName} {contact.lastName}
+                </Link>
+                <Link
+                  href={`/contacts/${contactId}`}
+                  className="text-muted-foreground hover:text-primary"
+                  aria-label="Open full contact record"
+                >
+                  <ExternalLink className="w-4 h-4" />
+                </Link>
+              </div>
               {contact.jobTitle && <p className="text-sm text-muted-foreground">{contact.jobTitle}</p>}
               {contact.account && (
                 <div className="flex items-center gap-1 mt-1">
                   <Building2 className="w-3.5 h-3.5 text-muted-foreground" />
-                  <span className="text-sm text-muted-foreground">{contact.account.name}</span>
+                  <Link href={`/brands/${contact.account.id}`} className="text-sm text-primary hover:underline">
+                    {contact.account.name}
+                  </Link>
                 </div>
               )}
               <div className="flex gap-2 flex-wrap mt-2">
@@ -284,59 +375,29 @@ function ContactPanel({ contactId, onClose }: {
           {/* Current Pipeline */}
           <section>
             <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">Current Pipeline</h4>
-            {activeDeals.length === 0 ? (
-              <p className="text-sm text-muted-foreground italic">No active deals.</p>
+            {activePipeline.length === 0 && hiddenPipeline.length === 0 ? (
+              <p className="text-sm text-muted-foreground italic">No active opportunities or deals.</p>
             ) : (
               <div className="space-y-2">
-                {activeDeals.map(deal => (
-                  deal.visible ? (
-                    <div key={deal.id} className="p-3 bg-muted/40 rounded-xl border border-border/40">
-                      <p className="font-medium text-sm text-foreground">{deal.name}</p>
-                      <div className="flex items-center gap-3 mt-1 text-xs text-muted-foreground flex-wrap">
-                        {deal.stage && (
-                          <span className="px-2 py-0.5 bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-300 rounded-full">{deal.stage}</span>
-                        )}
-                        {deal.value != null && <span className="font-semibold text-foreground">{formatCurrencyINR(deal.value)}</span>}
-                        {deal.closeDate && <span>Closes {formatDateIST(deal.closeDate)}</span>}
-                        <span>· {deal.owner.firstName} {deal.owner.lastName}</span>
-                      </div>
-                    </div>
-                  ) : (
-                    <div key={deal.id} className="p-3 bg-muted/30 rounded-xl text-sm text-muted-foreground italic">
-                      Active deal being worked by{' '}
-                      <span className="font-medium text-foreground">{deal.owner.firstName} {deal.owner.lastName}</span>
-                    </div>
-                  )
+                {activePipeline.map((record) => (
+                  <PipelineRecordCard key={`${record.recordType}-${record.id}`} record={record} />
                 ))}
+                {hiddenPipeline.length > 0 && (
+                  <p className="text-sm text-muted-foreground italic bg-muted/30 p-3 rounded-xl">
+                    Additional pipeline records are being worked by other team members.
+                  </p>
+                )}
               </div>
             )}
           </section>
 
-          {/* Previous Pipelines */}
-          {pastDeals.length > 0 && (
+          {/* Closed Pipeline */}
+          {closedPipeline.length > 0 && (
             <section>
-              <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">Previous Deals</h4>
+              <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">Closed Pipeline</h4>
               <div className="space-y-2">
-                {pastDeals.map(deal => (
-                  deal.visible ? (
-                    <div key={deal.id} className="p-3 bg-muted/30 rounded-xl border border-border/30">
-                      <p className="text-sm font-medium text-foreground">{deal.name}</p>
-                      <div className="flex items-center gap-2 mt-1 text-xs text-muted-foreground flex-wrap">
-                        {deal.stage && (
-                          <span className={cn('px-2 py-0.5 rounded-full', /won/i.test(deal.stage) ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700')}>
-                            {deal.stage}
-                          </span>
-                        )}
-                        {deal.value != null && <span>{formatCurrencyINR(deal.value)}</span>}
-                        <span>· {deal.owner.firstName} {deal.owner.lastName}</span>
-                      </div>
-                    </div>
-                  ) : (
-                    <div key={deal.id} className="p-3 bg-muted/30 rounded-xl text-sm text-muted-foreground italic">
-                      Past deal handled by{' '}
-                      <span className="font-medium text-foreground">{deal.owner.firstName} {deal.owner.lastName}</span>
-                    </div>
-                  )
+                {closedPipeline.filter((r) => r.visible).map((record) => (
+                  <PipelineRecordCard key={`${record.recordType}-${record.id}`} record={record} compact />
                 ))}
               </div>
             </section>

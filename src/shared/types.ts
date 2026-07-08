@@ -19,6 +19,7 @@ export type Module =
   | 'accounts'
   | 'brands'
   | 'deals'
+  | 'opportunities'
   | 'tasks'
   | 'calls'
   | 'emails'

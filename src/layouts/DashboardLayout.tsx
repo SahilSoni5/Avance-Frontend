@@ -25,7 +25,7 @@ const ROUTE_LABELS: Record<string, string> = {
   contacts: 'Contacts',
   brands: 'Brands',
   accounts: 'Brands',
-  deals: 'Deals',
+  opportunities: 'Opportunities',
   tasks: 'Tasks',
   calls: 'Calls',
   emails: 'Emails',
@@ -47,7 +47,11 @@ function useBreadcrumbs() {
     const path = '/' + parts.slice(0, i + 1).join('/');
     const isId = /^[0-9a-f-]{36}$/i.test(part);
     return {
-      label: isId ? 'Detail' : ROUTE_LABELS[part] ?? part,
+      label: isId
+        ? parts[i - 1] === 'opportunities'
+          ? 'Opportunity'
+          : 'Detail'
+        : ROUTE_LABELS[part] ?? part,
       href: i < parts.length - 1 ? path : undefined,
     };
   });
@@ -60,6 +64,7 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const breadcrumbs = useBreadcrumbs();
+  const isSalesforceShell = pathname.startsWith('/opportunities');
 
   useEffect(() => {
     setDark(isDark);
@@ -189,14 +194,21 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
         </header>
 
         <div className="flex flex-1 overflow-hidden">
-          <div className="flex-1 flex flex-col overflow-hidden min-w-0 mesh-bg">
-            <div className="px-6 py-2.5 border-b border-border/40 bg-card/40 backdrop-blur-sm">
-              <Breadcrumbs items={breadcrumbs} />
+          {isSalesforceShell ? (
+            <div className="flex-1 flex flex-col overflow-hidden min-w-0 bg-[#f3f3f3]">
+              <div className="px-4 sm:px-6 py-2 border-b border-[#c9c9c9] bg-white">
+                <Breadcrumbs items={breadcrumbs} />
+              </div>
+              <main className="flex-1 overflow-y-auto scrollbar-thin">{children}</main>
             </div>
-            <main className="flex-1 overflow-y-auto scrollbar-thin">
-              {children}
-            </main>
-          </div>
+          ) : (
+            <div className="flex-1 flex flex-col overflow-hidden min-w-0 mesh-bg">
+              <div className="px-6 py-2.5 border-b border-border/40 bg-card/40 backdrop-blur-sm">
+                <Breadcrumbs items={breadcrumbs} />
+              </div>
+              <main className="flex-1 overflow-y-auto scrollbar-thin">{children}</main>
+            </div>
+          )}
         </div>
       </div>
     </div>

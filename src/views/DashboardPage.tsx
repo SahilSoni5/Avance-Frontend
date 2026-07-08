@@ -81,21 +81,21 @@ export function DashboardPage() {
   const cards = user?.role === Role.INTERN
     ? [
         { title: 'My Contacts', value: stats?.contacts, idx: 0 },
-        { title: 'My Deals', value: stats?.deals, idx: 2 },
+        { title: 'My Opportunities', value: stats?.deals, idx: 2 },
         { title: 'My Tasks', value: stats?.tasks, idx: 3 },
         { title: 'Pipeline Value', value: stats?.pipelineValue ? formatCurrency(stats.pipelineValue) : '—', idx: 1 },
       ]
     : user?.role === Role.EMPLOYEE
       ? [
           { title: 'My Contacts', value: stats?.contacts, idx: 0 },
-          { title: 'My Deals', value: stats?.deals, idx: 2 },
+          { title: 'My Opportunities', value: stats?.deals, idx: 2 },
           { title: 'My Tasks', value: stats?.tasks, idx: 3 },
           { title: 'Pipeline Value', value: stats?.pipelineValue ? formatCurrency(stats.pipelineValue) : '—', idx: 1 },
         ]
       : user?.role === Role.MANAGER
         ? [
             { title: 'Team Contacts', value: stats?.contacts, idx: 0 },
-            { title: 'Team Deals', value: stats?.deals, idx: 2 },
+            { title: 'Team Opportunities', value: stats?.deals, idx: 2 },
             { title: 'Team Tasks', value: stats?.tasks, idx: 3 },
             { title: 'Pipeline Value', value: stats?.pipelineValue ? formatCurrency(stats.pipelineValue) : '—', idx: 1 },
           ]
@@ -103,7 +103,7 @@ export function DashboardPage() {
             { title: 'Total Contacts', value: stats?.contacts, idx: 0 },
             { title: 'Total Brands', value: stats?.accounts, idx: 1 },
             { title: 'Pipeline Value', value: stats?.pipelineValue ? formatCurrency(stats.pipelineValue) : '—', idx: 1 },
-            { title: 'Open Deals', value: stats?.deals, idx: 2 },
+            { title: 'Open Opportunities', value: stats?.deals, idx: 2 },
           ];
 
   const stageData = stats?.dealsByStage?.map((s, i) => ({
@@ -242,7 +242,7 @@ export function DashboardPage() {
                       {[
                         { key: 'rank' as SortKey, label: '#' },
                         { key: 'rank' as SortKey, label: 'Name', noSort: true },
-                        { key: 'dealsClosed' as SortKey, label: 'Deals' },
+                        { key: 'dealsClosed' as SortKey, label: 'Opportunities' },
                         { key: 'revenue' as SortKey, label: 'Revenue' },
                         { key: 'callsMade' as SortKey, label: 'Calls' },
                         { key: 'meetingsSet' as SortKey, label: 'Meetings' },
@@ -331,7 +331,7 @@ export function DashboardPage() {
                         <span className="text-primary/70 font-semibold mr-1.5">{stage.order}.</span>
                         {stage.name}
                       </span>
-                      <span className="text-foreground font-semibold">{stage.count} deals</span>
+                      <span className="text-foreground font-semibold">{stage.count} opportunities</span>
                     </div>
                     <div className="h-7 rounded-lg overflow-hidden bg-muted/40 relative">
                       <div

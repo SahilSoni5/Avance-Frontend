@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Search, Bell, User, Building2, Handshake, CheckSquare, Command } from 'lucide-react';
+import { Search, Bell, User, Building2, CheckSquare, Command, Target } from 'lucide-react';
 import { apiFetch } from '../lib/api';
 import { cn } from '../lib/utils';
 
@@ -11,7 +11,7 @@ const TYPE_ICONS: Record<string, typeof User> = {
   contact: User,
   account: Building2,
   brand: Building2,
-  deal: Handshake,
+  opportunity: Target,
   task: CheckSquare,
 };
 
@@ -19,7 +19,7 @@ const TYPE_COLORS: Record<string, string> = {
   contact: 'from-indigo-500 to-violet-500',
   account: 'from-sky-500 to-cyan-500',
   brand: 'from-sky-500 to-cyan-500',
-  deal: 'from-emerald-500 to-teal-500',
+  opportunity: 'from-emerald-500 to-teal-500',
   task: 'from-rose-500 to-pink-500',
 };
 
@@ -95,7 +95,7 @@ export function TopBar() {
     contact: '/contacts',
     account: '/brands',
     brand: '/brands',
-    deal: '/deals',
+    opportunity: '/opportunities',
     task: '/tasks',
   };
 
@@ -128,7 +128,7 @@ export function TopBar() {
             onChange={(e) => { setQuery(e.target.value); setSearchOpen(true); }}
             onFocus={() => { setSearchOpen(true); setFocused(true); }}
             onBlur={() => setFocused(false)}
-            placeholder="Search contacts, brands, deals..."
+            placeholder="Search contacts, brands, opportunities..."
             className="w-full pl-10 pr-24 py-2.5 text-sm bg-transparent text-foreground placeholder:text-muted-foreground outline-none rounded-xl"
           />
           <div className="absolute right-2 flex items-center gap-1 pointer-events-none">

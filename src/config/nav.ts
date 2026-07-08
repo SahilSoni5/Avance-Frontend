@@ -1,7 +1,7 @@
 import {
-  LayoutDashboard, Users, Building2, Handshake, CheckSquare, Phone, Mail,
+  LayoutDashboard, Users, Building2, CheckSquare, Phone, Mail,
   Calendar, Megaphone, BarChart3, FileText, UsersRound, Settings, Crown,
-  GitBranch, UserCircle, UserCog,
+  GitBranch, UserCircle, UserCog, Target,
 } from 'lucide-react';
 import { Role } from '@crm/shared';
 
@@ -13,7 +13,7 @@ export const NAV_ITEMS = [
   { to: '/', icon: LayoutDashboard, label: 'Dashboard', roles: [...ALL_ROLES] },
   { to: '/contacts', icon: Users, label: 'Contacts', roles: [...ALL_ROLES] },
   { to: '/brands', icon: Building2, label: 'Brands', roles: [...ALL_ROLES] },
-  { to: '/deals', icon: Handshake, label: 'Deals', roles: [...ALL_ROLES] },
+  { to: '/opportunities', icon: Target, label: 'Opportunities', roles: [...ALL_ROLES] },
   { to: '/tasks', icon: CheckSquare, label: 'Tasks', roles: [...ALL_ROLES] },
   { to: '/calls', icon: Phone, label: 'Calls', roles: [...ALL_ROLES] },
   { to: '/emails', icon: Mail, label: 'Emails', roles: [...ALL_ROLES] },

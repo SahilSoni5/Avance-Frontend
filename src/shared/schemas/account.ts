@@ -22,6 +22,11 @@ export const addAccountPocsSchema = z.object({
   pocs: z.array(pocInputSchema).min(1),
 });
 
+export const createAccountUpdateSchema = z.object({
+  content: z.string().min(1).max(5000),
+});
+
 export type PocInput = z.infer<typeof pocInputSchema>;
 export type CreateAccountInput = z.infer<typeof createAccountSchema>;
 export type AddAccountPocsInput = z.infer<typeof addAccountPocsSchema>;
+export type CreateAccountUpdateInput = z.infer<typeof createAccountUpdateSchema>;

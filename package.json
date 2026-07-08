@@ -5,7 +5,10 @@
   "scripts": {
     "dev": "next dev --port 3000",
     "build": "next build",
+    "build:prod": "NODE_ENV=production next build",
     "start": "next start --port 3000",
+    "start:prod": "NODE_ENV=production next start --port 3000",
+    "production:build": "bash scripts/production-build.sh",
     "lint": "tsc --noEmit",
     "test": "jest",
     "test:e2e": "playwright test"
@@ -23,7 +26,7 @@
     "clsx": "^2.1.1",
     "date-fns": "^4.1.0",
     "lucide-react": "^0.468.0",
-    "next": "^15.1.0",
+    "next": "15.4.7",
     "pusher-js": "^8.5.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
