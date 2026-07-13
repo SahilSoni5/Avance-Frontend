@@ -90,6 +90,7 @@ export const PERMISSIONS: PermissionMatrix = {
     organizations: ['read'],
     data: ['read', 'export', 'import'],
     custom_fields: ['read'],
+    tickets: ['create', 'read', 'update'],
   },
   [Role.INTERN]: {
     contacts: ['create', 'read', 'update'],
@@ -108,6 +109,7 @@ export const PERMISSIONS: PermissionMatrix = {
     users: ['read'],
     organizations: ['read'],
     custom_fields: ['read'],
+    tickets: ['create', 'read'],
   },
 };
 

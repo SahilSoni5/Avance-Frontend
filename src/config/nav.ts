@@ -1,14 +1,14 @@
 import {
   LayoutDashboard, Users, Building2, CheckSquare, Phone, Mail,
   Calendar, Megaphone, BarChart3, FileText, UsersRound, Settings, Crown,
-  GitBranch, UserCircle, UserCog, Target,
+  GitBranch, UserCircle, UserCog, Target, Ticket,
 } from 'lucide-react';
 import { Role } from '@crm/shared';
 
 const ALL_ROLES = [Role.ADMIN, Role.BOSS, Role.MANAGER, Role.EMPLOYEE, Role.INTERN] as const;
 const NON_INTERN = [Role.ADMIN, Role.BOSS, Role.MANAGER, Role.EMPLOYEE] as const;
 
-/** Core AVANCE modules — extra modules (tickets, goals, billing, etc.) are not exposed in the UI. */
+/** Core AVANCE modules — remaining backend-only modules (goals, billing, automations, etc.) are not exposed in the UI. */
 export const NAV_ITEMS = [
   { to: '/', icon: LayoutDashboard, label: 'Dashboard', roles: [...ALL_ROLES] },
   { to: '/contacts', icon: Users, label: 'Contacts', roles: [...ALL_ROLES] },
@@ -17,6 +17,7 @@ export const NAV_ITEMS = [
   { to: '/tasks', icon: CheckSquare, label: 'Tasks', roles: [...ALL_ROLES] },
   { to: '/calls', icon: Phone, label: 'Calls', roles: [...ALL_ROLES] },
   { to: '/emails', icon: Mail, label: 'Emails', roles: [...ALL_ROLES] },
+  { to: '/tickets', icon: Ticket, label: 'Tickets', roles: [...ALL_ROLES] },
   { to: '/calendar', icon: Calendar, label: 'Calendar', roles: [...ALL_ROLES] },
   { to: '/campaigns', icon: Megaphone, label: 'Campaigns', roles: [...ALL_ROLES] },
   { to: '/teams', icon: UsersRound, label: 'Teams', roles: [...ALL_ROLES] },

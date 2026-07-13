@@ -12,8 +12,11 @@ import { formatDateIST, formatNumberIN } from '../lib/locale';
 import { Button } from '../components/ui';
 import { Sheet } from '../components/ui/Sheet';
 import { ContactFormDialog, contactFormToApiBody, type ContactFormValues } from '../components/ContactFormDialog';
+import { ContactUpdatesSection } from '../components/ContactUpdatesSection';
 import { PipelineRecordCard, type PipelineRecord } from '../components/related/PipelineRecordCard';
 import { invalidateContactBrandSync } from '../lib/query-invalidation';
+import { useAuthStore } from '../stores/auth.store';
+import { hasPermission } from '@crm/shared';
 import { cn } from '../lib/utils';
 
 // --- Types ---
@@ -77,11 +80,11 @@ const INDUSTRY_COLORS: Record<string, string> = {
 const INDUSTRIES = ['FMCG','Banking','Insurance','Retail','Technology','Healthcare','Education','Real Estate','Manufacturing','Media','Hospitality','Logistics','Other'];
 
 const STATUS_STYLES: Record<string, string> = {
-  Lead: 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300',
-  Prospect: 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300',
-  Customer: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300',
-  Active: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300',
-  Inactive: 'bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-400',
+  Picked: 'bg-emerald-800 text-emerald-100',
+  'Not picked': 'bg-amber-100 text-amber-900',
+  Rescheduled: 'bg-sky-100 text-sky-800',
+  'DND at all': 'bg-red-700 text-white',
+  'someone else reached': 'bg-neutral-800 text-neutral-100',
 };
 
 const ROLE_STYLES: Record<string, string> = {
@@ -172,6 +175,9 @@ function ContactCard({ contact, onClick }: { contact: Contact; onClick: () => vo
 function ContactPanel({ contactId, onClose }: {
   contactId: string; onClose: () => void;
 }) {
+  const user = useAuthStore((s) => s.user);
+  const canPostUpdates = !!user && hasPermission(user.role, 'contacts', 'update');
+
   const { data, isLoading } = useQuery({
     queryKey: ['contact-detail', contactId],
     queryFn: () => apiFetch<{ data: ContactDetail }>(`/contacts/${contactId}`),
@@ -403,6 +409,8 @@ function ContactPanel({ contactId, onClose }: {
             </section>
           )}
 
+          <ContactUpdatesSection contactId={contactId} canPost={canPostUpdates} />
+
           {/* Activity Timeline */}
           {contact.activities && contact.activities.length > 0 && (
             <section>
@@ -415,21 +423,6 @@ function ContactPanel({ contactId, onClose }: {
                       <p className="text-foreground">{act.description ?? act.subject}</p>
                       <p className="text-xs text-muted-foreground">{formatDateIST(act.createdAt)}</p>
                     </div>
-                  </div>
-                ))}
-              </div>
-            </section>
-          )}
-
-          {/* Notes */}
-          {contact.notes && contact.notes.length > 0 && (
-            <section>
-              <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">Notes</h4>
-              <div className="space-y-2">
-                {contact.notes.slice(0, 3).map(note => (
-                  <div key={note.id} className="p-3 bg-muted/30 rounded-xl text-sm">
-                    <p className="text-foreground">{note.content}</p>
-                    <p className="text-xs text-muted-foreground mt-1">{note.user.firstName} · {formatDateIST(note.createdAt)}</p>
                   </div>
                 ))}
               </div>

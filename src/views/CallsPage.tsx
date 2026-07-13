@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import Link from 'next/link';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   Plus, Phone, PhoneIncoming, PhoneOutgoing, PhoneMissed,
@@ -49,10 +50,12 @@ function CallRow({ call, onClick }: { call: Call; onClick: () => void }) {
   const DirectionIcon = call.direction === 'INBOUND' ? PhoneIncoming : PhoneOutgoing;
 
   return (
-    <button
-      type="button"
+    <div
+      role="button"
+      tabIndex={0}
       onClick={onClick}
-      className="w-full text-left flex items-center gap-4 px-4 py-3.5 border-b border-border/30 hover:bg-muted/40 transition-colors"
+      onKeyDown={(e) => { if (e.key === 'Enter') onClick(); }}
+      className="w-full text-left flex items-center gap-4 px-4 py-3.5 border-b border-border/30 hover:bg-muted/40 transition-colors cursor-pointer"
     >
       <div className={cn('w-9 h-9 rounded-xl flex items-center justify-center shrink-0',
         call.direction === 'INBOUND' ? 'bg-green-100 text-green-600' : 'bg-blue-100 text-blue-600'
@@ -62,9 +65,17 @@ function CallRow({ call, onClick }: { call: Call; onClick: () => void }) {
 
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2">
-          <span className="font-medium text-sm text-foreground">
-            {call.contact ? `${call.contact.firstName} ${call.contact.lastName}` : 'Unknown Contact'}
-          </span>
+          {call.contact ? (
+            <Link
+              href={`/contacts/${call.contact.id}`}
+              onClick={(e) => e.stopPropagation()}
+              className="font-medium text-sm text-primary hover:underline"
+            >
+              {call.contact.firstName} {call.contact.lastName}
+            </Link>
+          ) : (
+            <span className="font-medium text-sm text-foreground">Unknown Contact</span>
+          )}
           {outcome && (
             <span className={cn('text-xs px-2 py-0.5 rounded-full font-medium', outcome.color)}>
               {outcome.label}
@@ -72,7 +83,15 @@ function CallRow({ call, onClick }: { call: Call; onClick: () => void }) {
           )}
         </div>
         <div className="flex items-center gap-3 mt-0.5 text-xs text-muted-foreground flex-wrap">
-          {call.account && <span className="flex items-center gap-1"><Building2 className="w-3 h-3" /> {call.account.name}</span>}
+          {call.account && (
+            <Link
+              href={`/brands/${call.account.id}`}
+              onClick={(e) => e.stopPropagation()}
+              className="flex items-center gap-1 hover:text-primary hover:underline"
+            >
+              <Building2 className="w-3 h-3" /> {call.account.name}
+            </Link>
+          )}
           <span className="flex items-center gap-1"><Clock className="w-3 h-3" /> {formatDateTimeIST(call.callAt)}</span>
           {call.followUpDate && (
             <span className="flex items-center gap-1 text-amber-600"><Calendar className="w-3 h-3" /> Follow-up {formatDateIST(call.followUpDate)}</span>
@@ -84,7 +103,7 @@ function CallRow({ call, onClick }: { call: Call; onClick: () => void }) {
         <p className="text-xs text-muted-foreground">{call.loggedBy.firstName} {call.loggedBy.lastName}</p>
         <p className="text-xs text-muted-foreground mt-0.5">{call.direction}</p>
       </div>
-    </button>
+    </div>
   );
 }
 
@@ -104,9 +123,17 @@ function CallDetailPanel({ call, onClose }: { call: Call; onClose: () => void })
           </div>
           <div>
             <h3 className="font-bold text-lg text-foreground">
-              {call.contact ? `${call.contact.firstName} ${call.contact.lastName}` : 'Unknown Contact'}
+              {call.contact ? (
+                <Link href={`/contacts/${call.contact.id}`} className="text-primary hover:underline">
+                  {call.contact.firstName} {call.contact.lastName}
+                </Link>
+              ) : 'Unknown Contact'}
             </h3>
-            {call.account && <p className="text-sm text-muted-foreground">{call.account.name}</p>}
+            {call.account && (
+              <Link href={`/brands/${call.account.id}`} className="text-sm text-primary hover:underline">
+                {call.account.name}
+              </Link>
+            )}
             <div className="flex items-center gap-2 mt-1">
               {outcome && <span className={cn('text-xs px-2 py-0.5 rounded-full font-medium', outcome.color)}>{outcome.label}</span>}
               <span className="text-xs text-muted-foreground">{call.direction}</span>

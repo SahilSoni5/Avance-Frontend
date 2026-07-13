@@ -135,13 +135,31 @@ const STATUS_COLORS: Record<string, string> = {
   pending: 'bg-amber-500/10 text-amber-700 dark:text-amber-400 border-amber-500/20',
   won: 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-500/20',
   lost: 'bg-red-500/10 text-red-700 dark:text-red-400 border-red-500/20',
+  picked: 'bg-emerald-800 text-emerald-100 border-emerald-800',
+  not_picked: 'bg-amber-100 text-amber-900 border-amber-200',
+  rescheduled: 'bg-sky-100 text-sky-800 border-sky-200',
+  dnd_at_all: 'bg-red-700 text-white border-red-700',
+  someone_else_reached: 'bg-neutral-800 text-neutral-100 border-neutral-800',
 };
 
 export function StatusBadge({ status }: { status: string | null | undefined }) {
   const key = (status ?? 'active').toLowerCase().replace(/\s+/g, '_');
   const colorClass = STATUS_COLORS[key] ?? 'bg-muted text-muted-foreground border-border';
+  const preserveCase = [
+    'picked',
+    'not_picked',
+    'rescheduled',
+    'dnd_at_all',
+    'someone_else_reached',
+  ].includes(key);
   return (
-    <span className={cn('inline-flex px-2.5 py-0.5 text-xs font-medium rounded-full border capitalize', colorClass)}>
+    <span
+      className={cn(
+        'inline-flex px-2.5 py-0.5 text-xs font-medium rounded-full border',
+        !preserveCase && 'capitalize',
+        colorClass,
+      )}
+    >
       {status ?? 'Active'}
     </span>
   );

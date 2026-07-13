@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Search, Bell, User, Building2, CheckSquare, Command, Target } from 'lucide-react';
+import { Search, Bell, User, Building2, CheckSquare, Command, Target, Ticket } from 'lucide-react';
 import { apiFetch } from '../lib/api';
 import { cn } from '../lib/utils';
 
@@ -13,6 +13,7 @@ const TYPE_ICONS: Record<string, typeof User> = {
   brand: Building2,
   opportunity: Target,
   task: CheckSquare,
+  ticket: Ticket,
 };
 
 const TYPE_COLORS: Record<string, string> = {
@@ -21,6 +22,7 @@ const TYPE_COLORS: Record<string, string> = {
   brand: 'from-sky-500 to-cyan-500',
   opportunity: 'from-emerald-500 to-teal-500',
   task: 'from-rose-500 to-pink-500',
+  ticket: 'from-amber-500 to-orange-500',
 };
 
 interface NotificationRow {
@@ -97,6 +99,7 @@ export function TopBar() {
     brand: '/brands',
     opportunity: '/opportunities',
     task: '/tasks',
+    ticket: '/tickets',
   };
 
   const unread = notifData?.unreadCount ?? 0;
@@ -156,7 +159,11 @@ export function TopBar() {
                   <button
                     key={`${r.type}-${r.id}`}
                     className="w-full text-left px-4 py-3 text-sm hover:bg-primary/5 flex items-center gap-3 transition-colors first:rounded-t-2xl last:rounded-b-2xl"
-                    onClick={() => { router.push(`${routes[r.type] ?? '/'}/${r.id}`); setSearchOpen(false); setQuery(''); }}
+                    onClick={() => {
+                      if (routes[r.type]) router.push(`${routes[r.type]}/${r.id}`);
+                      setSearchOpen(false);
+                      setQuery('');
+                    }}
                   >
                     <span className={cn('w-8 h-8 rounded-lg flex items-center justify-center bg-gradient-to-br text-white shrink-0', color)}>
                       <Icon className="w-3.5 h-3.5" />

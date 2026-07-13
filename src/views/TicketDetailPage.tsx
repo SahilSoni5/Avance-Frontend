@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 
+import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { AlertTriangle, Star } from 'lucide-react';
@@ -27,7 +28,8 @@ interface TicketDetail {
   priority: string;
   csatScore: number | null;
   assignee: { firstName: string; lastName: string } | null;
-  contact: { firstName: string; lastName: string } | null;
+  contact: { id: string; firstName: string; lastName: string } | null;
+  account: { id: string; name: string } | null;
   replies: Array<{
     id: string;
     content: string;
@@ -156,7 +158,24 @@ export function TicketDetailPage() {
             <dl className="space-y-3 text-sm -mt-2">
               <div><dt className="text-slate-500">Assignee</dt><dd>{ticket.assignee ? <OwnerCell owner={ticket.assignee} /> : 'Unassigned'}</dd></div>
               {ticket.contact && (
-                <div><dt className="text-slate-500">Contact</dt><dd>{ticket.contact.firstName} {ticket.contact.lastName}</dd></div>
+                <div>
+                  <dt className="text-slate-500">Contact</dt>
+                  <dd>
+                    <Link href={`/contacts/${ticket.contact.id}`} className="text-primary hover:underline">
+                      {ticket.contact.firstName} {ticket.contact.lastName}
+                    </Link>
+                  </dd>
+                </div>
+              )}
+              {ticket.account && (
+                <div>
+                  <dt className="text-slate-500">Brand</dt>
+                  <dd>
+                    <Link href={`/brands/${ticket.account.id}`} className="text-primary hover:underline">
+                      {ticket.account.name}
+                    </Link>
+                  </dd>
+                </div>
               )}
             </dl>
           </SectionCard>

@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useMemo } from 'react';
+import Link from 'next/link';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   Plus, CheckCircle2, Circle, Clock, AlertCircle, Calendar, Phone,
@@ -145,9 +146,22 @@ function TaskCard({
             )}
 
             {task.contact && (
-              <span className="text-xs text-muted-foreground bg-muted/50 px-2 py-0.5 rounded-full">
+              <Link
+                href={`/contacts/${task.contact.id}`}
+                onClick={(e) => e.stopPropagation()}
+                className="text-xs text-primary hover:underline bg-muted/50 px-2 py-0.5 rounded-full"
+              >
                 {task.contact.firstName} {task.contact.lastName}
-              </span>
+              </Link>
+            )}
+            {task.account && (
+              <Link
+                href={`/brands/${task.account.id}`}
+                onClick={(e) => e.stopPropagation()}
+                className="text-xs text-primary hover:underline bg-muted/50 px-2 py-0.5 rounded-full"
+              >
+                {task.account.name}
+              </Link>
             )}
             {task.deal && (
               <span className="text-xs text-muted-foreground bg-muted/50 px-2 py-0.5 rounded-full">

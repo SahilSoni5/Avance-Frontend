@@ -26,5 +26,10 @@ export const createContactSchema = z.object({
 
 export const updateContactSchema = createContactSchema.partial();
 
+export const createContactUpdateSchema = z.object({
+  content: z.string().min(1).max(5000),
+});
+
 export type CreateContactInput = z.infer<typeof createContactSchema>;
 export type UpdateContactInput = z.infer<typeof updateContactSchema>;
+export type CreateContactUpdateInput = z.infer<typeof createContactUpdateSchema>;

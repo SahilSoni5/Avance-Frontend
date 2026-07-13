@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import Link from 'next/link';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   Plus, Mail, MailOpen, X, Clock, Building2, BarChart3, Loader2,
@@ -53,10 +54,12 @@ function getEmailStatus(email: Email) {
 function EmailRow({ email, onClick }: { email: Email; onClick: () => void }) {
   const status = getEmailStatus(email);
   return (
-    <button
-      type="button"
+    <div
+      role="button"
+      tabIndex={0}
       onClick={onClick}
-      className="w-full text-left flex items-center gap-4 px-4 py-3.5 border-b border-border/30 hover:bg-muted/40 transition-colors"
+      onKeyDown={(e) => { if (e.key === 'Enter') onClick(); }}
+      className="w-full text-left flex items-center gap-4 px-4 py-3.5 border-b border-border/30 hover:bg-muted/40 transition-colors cursor-pointer"
     >
       <div className="w-9 h-9 rounded-xl bg-indigo-100 text-indigo-600 flex items-center justify-center shrink-0">
         {email.openedAt ? <MailOpen className="w-4 h-4" /> : <Mail className="w-4 h-4" />}
@@ -70,8 +73,16 @@ function EmailRow({ email, onClick }: { email: Email; onClick: () => void }) {
         </div>
         <div className="flex items-center gap-3 mt-0.5 text-xs text-muted-foreground">
           <span>To: {email.toEmails[0] ?? '—'}</span>
-          {email.contact && <span>{email.contact.firstName} {email.contact.lastName}</span>}
-          {email.account && <span className="flex items-center gap-1"><Building2 className="w-3 h-3" /> {email.account.name}</span>}
+          {email.contact && (
+            <Link href={`/contacts/${email.contact.id}`} onClick={(e) => e.stopPropagation()} className="hover:text-primary hover:underline">
+              {email.contact.firstName} {email.contact.lastName}
+            </Link>
+          )}
+          {email.account && (
+            <Link href={`/brands/${email.account.id}`} onClick={(e) => e.stopPropagation()} className="flex items-center gap-1 hover:text-primary hover:underline">
+              <Building2 className="w-3 h-3" /> {email.account.name}
+            </Link>
+          )}
           {email.sentAt && <span className="flex items-center gap-1"><Clock className="w-3 h-3" /> {formatDateIST(email.sentAt)}</span>}
           {email.followUpDate && <span className="text-amber-600">Follow-up {formatDateIST(email.followUpDate)}</span>}
         </div>
@@ -79,7 +90,7 @@ function EmailRow({ email, onClick }: { email: Email; onClick: () => void }) {
       <div className="text-right shrink-0 text-xs text-muted-foreground">
         <p>{email.sentBy.firstName} {email.sentBy.lastName}</p>
       </div>
-    </button>
+    </div>
   );
 }
 
@@ -103,6 +114,22 @@ function EmailDetailPanel({ email, onClose }: { email: Email; onClose: () => voi
             <p className="text-xs text-muted-foreground">From</p>
             <p className="font-medium text-foreground">{email.sentBy.firstName} {email.sentBy.lastName}</p>
           </div>
+          {email.contact && (
+            <div>
+              <p className="text-xs text-muted-foreground">Contact</p>
+              <Link href={`/contacts/${email.contact.id}`} className="font-medium text-primary hover:underline">
+                {email.contact.firstName} {email.contact.lastName}
+              </Link>
+            </div>
+          )}
+          {email.account && (
+            <div>
+              <p className="text-xs text-muted-foreground">Brand</p>
+              <Link href={`/brands/${email.account.id}`} className="font-medium text-primary hover:underline">
+                {email.account.name}
+              </Link>
+            </div>
+          )}
           {email.sentAt && (
             <div>
               <p className="text-xs text-muted-foreground">Sent At</p>

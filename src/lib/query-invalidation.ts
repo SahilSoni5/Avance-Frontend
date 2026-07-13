@@ -16,5 +16,6 @@ export function invalidateContactBrandSync(
   if (opts?.contactId) {
     queryClient.invalidateQueries({ queryKey: ['contact-detail', opts.contactId] });
     queryClient.invalidateQueries({ queryKey: ['contact', opts.contactId] });
+    queryClient.invalidateQueries({ queryKey: ['contact-updates', opts.contactId] });
   }
 }

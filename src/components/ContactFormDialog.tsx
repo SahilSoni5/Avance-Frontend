@@ -19,7 +19,7 @@ const EMPTY: ContactFormValues = {
   jobTitle: '',
   email: '',
   phone: '',
-  status: 'Lead',
+  status: 'Not picked',
   brandName: '',
 };
 
@@ -129,11 +129,11 @@ export function ContactFormDialog({
         <div className="space-y-1">
           <label className="text-sm font-medium text-foreground">Status</label>
           <Select value={values.status} onChange={(e) => set('status', e.target.value)}>
-            <option value="Lead">Lead</option>
-            <option value="Prospect">Prospect</option>
-            <option value="Active">Active</option>
-            <option value="Customer">Customer</option>
-            <option value="Inactive">Inactive</option>
+            <option value="Picked">Picked</option>
+            <option value="Not picked">Not picked</option>
+            <option value="Rescheduled">Rescheduled</option>
+            <option value="DND at all">DND at all</option>
+            <option value="someone else reached">someone else reached</option>
           </Select>
         </div>
 
@@ -153,12 +153,11 @@ export function ContactFormDialog({
 }
 
 export function contactFormToApiBody(values: ContactFormValues, opts?: { includeEmptyBrand?: boolean }) {
-  const linkedToBrand = Boolean(values.brandName);
   return {
     firstName: values.firstName,
     lastName: values.lastName,
     ...(values.jobTitle ? { jobTitle: values.jobTitle } : {}),
-    status: linkedToBrand && values.status === 'Lead' ? 'Active' : values.status || 'Lead',
+    status: values.status || 'Not picked',
     ...(values.brandName || opts?.includeEmptyBrand ? { accountName: values.brandName } : {}),
     ...(values.email ? { emails: [{ email: values.email, isPrimary: true }] } : {}),
     ...(values.phone ? { phones: [{ phone: values.phone, isPrimary: true }] } : {}),

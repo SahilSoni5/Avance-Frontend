@@ -1,10 +1,11 @@
 'use client';
 
 import { useState } from 'react';
+import Link from 'next/link';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   Plus, Search, FileText, File, Sheet as SheetIcon, Image,
-  ExternalLink, Download, Trash2, X, FolderOpen, Loader2,
+  ExternalLink, Download, Trash2, X, FolderOpen, Loader2, User, Building2,
 } from 'lucide-react';
 import { apiFetch } from '../lib/api';
 import { formatDateIST } from '../lib/locale';
@@ -25,6 +26,8 @@ interface DocumentRecord {
   size: number;
   createdAt: string;
   owner: DocOwner;
+  contact?: { id: string; firstName: string; lastName: string } | null;
+  account?: { id: string; name: string } | null;
 }
 
 function fileIcon(mimeType: string) {
@@ -70,6 +73,28 @@ function DocumentCard({ doc, onClick }: { doc: DocumentRecord; onClick: () => vo
       <p className="font-semibold text-sm text-foreground truncate">{doc.name}</p>
       {doc.purpose && (
         <p className="text-xs text-muted-foreground mt-1 line-clamp-2">{doc.purpose}</p>
+      )}
+      {(doc.contact || doc.account) && (
+        <div className="flex items-center gap-2 mt-2 flex-wrap">
+          {doc.contact && (
+            <Link
+              href={`/contacts/${doc.contact.id}`}
+              onClick={(e) => e.stopPropagation()}
+              className="flex items-center gap-1 text-xs text-primary hover:underline"
+            >
+              <User className="w-3 h-3" /> {doc.contact.firstName} {doc.contact.lastName}
+            </Link>
+          )}
+          {doc.account && (
+            <Link
+              href={`/brands/${doc.account.id}`}
+              onClick={(e) => e.stopPropagation()}
+              className="flex items-center gap-1 text-xs text-primary hover:underline"
+            >
+              <Building2 className="w-3 h-3" /> {doc.account.name}
+            </Link>
+          )}
+        </div>
       )}
       <div className="flex items-center justify-between mt-3 text-xs text-muted-foreground">
         <span>{formatBytes(doc.size)}</span>
@@ -138,6 +163,22 @@ function DocumentPanel({ docId, onClose, onDelete }: { docId: string; onClose: (
               <p className="text-xs text-muted-foreground">Uploaded by</p>
               <p className="font-medium text-foreground">{doc.owner.firstName} {doc.owner.lastName}</p>
             </div>
+            {doc.contact && (
+              <div>
+                <p className="text-xs text-muted-foreground">Contact</p>
+                <Link href={`/contacts/${doc.contact.id}`} className="font-medium text-primary hover:underline">
+                  {doc.contact.firstName} {doc.contact.lastName}
+                </Link>
+              </div>
+            )}
+            {doc.account && (
+              <div>
+                <p className="text-xs text-muted-foreground">Brand</p>
+                <Link href={`/brands/${doc.account.id}`} className="font-medium text-primary hover:underline">
+                  {doc.account.name}
+                </Link>
+              </div>
+            )}
           </div>
           <div className="flex gap-2 pt-2">
             <a

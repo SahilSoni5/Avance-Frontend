@@ -11,9 +11,12 @@ import { ModulePage, LoadingRows, ErrorMessage, StatusBadge, OwnerCell } from '.
 import { Breadcrumbs } from '../components/Breadcrumbs';
 import { Button, Dialog, SectionCard, Badge } from '../components/ui';
 import { ContactFormDialog, contactFormToApiBody, type ContactFormValues } from '../components/ContactFormDialog';
+import { ContactUpdatesSection } from '../components/ContactUpdatesSection';
 import { RecordForm } from '../components/RecordForm';
 import { PipelineRecordCard, type PipelineRecord } from '../components/related/PipelineRecordCard';
 import { invalidateContactBrandSync } from '../lib/query-invalidation';
+import { useAuthStore } from '../stores/auth.store';
+import { hasPermission } from '@crm/shared';
 
 interface ContactDetail {
   id: string;
@@ -49,6 +52,8 @@ interface DuplicateGroup {
 export function ContactDetailPage() {
   const { id } = useParams<{ id: string }>();
   const queryClient = useQueryClient();
+  const user = useAuthStore((s) => s.user);
+  const canPostUpdates = !!user && hasPermission(user.role, 'contacts', 'update');
   const [editOpen, setEditOpen] = useState(false);
   const [reassignOpen, setReassignOpen] = useState(false);
 
@@ -199,18 +204,7 @@ export function ContactDetailPage() {
             </div>
           </SectionCard>
 
-          <SectionCard title="Notes">
-            <div className="space-y-3 -mt-2">
-              {contact.notes?.length ? contact.notes.map((n) => (
-                <div key={n.id} className="p-3 rounded-lg bg-muted dark:bg-slate-800/50">
-                  <p className="text-sm">{n.content}</p>
-                  <p className="text-xs text-slate-400 mt-2">
-                    {n.user.firstName} {n.user.lastName} · {formatDateTimeIST(n.createdAt)}
-                  </p>
-                </div>
-              )) : <p className="text-sm text-slate-500">No notes</p>}
-            </div>
-          </SectionCard>
+          {id && <ContactUpdatesSection contactId={id} canPost={canPostUpdates} />}
 
         </div>
 
@@ -273,7 +267,7 @@ export function ContactDetailPage() {
           jobTitle: contact.jobTitle ?? '',
           email: contact.emails[0]?.email ?? '',
           phone: contact.phones[0]?.phone ?? '',
-          status: contact.status ?? 'Active',
+          status: contact.status ?? 'Not picked',
           brandName: contact.account?.name ?? '',
         }}
         loading={updateMutation.isPending}
